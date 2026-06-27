@@ -1,13 +1,15 @@
 'use client';
 
 import { SquarePen } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import type Quill from 'quill';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import type { Id } from '@/../convex/_generated/dataModel';
-import Editor from '@/components/editor';
+
+const Editor = dynamic(() => import('@/components/editor'), { ssr: false });
 import { useCreateOrGetConversation } from '@/features/conversations/api/use-create-or-get-conversation';
 import { useCreateMessage } from '@/features/messages/api/use-create-message';
 import { useGenerateUploadUrl } from '@/features/upload/api/use-generate-upload-url';

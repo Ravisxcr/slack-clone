@@ -1,3 +1,5 @@
+'use client';
+
 import { ImageIcon, Smile, XIcon } from 'lucide-react';
 import Image from 'next/image';
 import Quill, { type QuillOptions } from 'quill';
