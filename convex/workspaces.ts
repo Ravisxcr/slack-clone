@@ -1,6 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 
+import type { Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
 
 const generateCode = () => {
@@ -30,12 +31,25 @@ export const join = mutation({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.workspaceId).eq('userId', userId))
       .unique();
 
-    if (existingMember) throw new Error('Already a member of this workspace.');
+    if (existingMember) {
+      if (existingMember.status !== 'disabled') throw new Error('Already a member of this workspace.');
+      await ctx.db.patch(existingMember._id, { status: 'active' });
+    } else {
+      await ctx.db.insert('members', {
+        userId,
+        workspaceId: workspace._id,
+        role: 'member',
+      });
+    }
 
-    await ctx.db.insert('members', {
-      userId,
+    const joiningUser = await ctx.db.get(userId);
+
+    await ctx.db.insert('memberEvents', {
       workspaceId: workspace._id,
-      role: 'member',
+      actorName: joiningUser?.name ?? 'Unknown',
+      targetName: joiningUser?.name ?? 'Unknown',
+      targetImage: joiningUser?.image ?? undefined,
+      action: 'joined',
     });
 
     return workspace._id;
@@ -56,7 +70,7 @@ export const newJoinCode = mutation({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.workspaceId).eq('userId', userId))
       .unique();
 
-    if (!member || member.role !== 'admin') throw new Error('Unauthorized.');
+    if (!member || member.status === 'disabled' || member.role !== 'admin') throw new Error('Unauthorized.');
 
     const joinCode = generateCode();
 
@@ -114,7 +128,9 @@ export const get = query({
       .withIndex('by_user_id', (q) => q.eq('userId', userId))
       .collect();
 
-    const workspaceIds = members.map((member) => member.workspaceId);
+    const workspaceIds = members
+      .filter((member) => member.status !== 'disabled')
+      .map((member) => member.workspaceId);
 
     const workspaces = [];
 
@@ -146,10 +162,12 @@ export const getInfoById = query({
 
     if (!workspace) return null;
 
+    const activeMember = member?.status !== 'disabled' ? member : null;
+
     return {
       name: workspace?.name,
-      isMember: !!member,
-      role: member?.role,
+      isMember: !!activeMember,
+      role: activeMember?.role,
     };
   },
 });
@@ -166,7 +184,7 @@ export const getById = query({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.id).eq('userId', userId))
       .unique();
 
-    if (!member) return null;
+    if (!member || member.status === 'disabled') return null;
 
     return await ctx.db.get(args.id);
   },
@@ -187,7 +205,7 @@ export const update = mutation({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.id).eq('userId', userId))
       .unique();
 
-    if (!member || member.role !== 'admin') throw new Error('Unauthorized.');
+    if (!member || member.status === 'disabled' || member.role !== 'admin') throw new Error('Unauthorized.');
 
     if (args.name.length < 3 || args.name.length > 20) throw new Error('Invalid workspace name.');
 
@@ -214,7 +232,7 @@ export const inviteByEmail = mutation({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.workspaceId).eq('userId', userId))
       .unique();
 
-    if (!currentMember || currentMember.role !== 'admin') throw new Error('Unauthorized.');
+    if (!currentMember || currentMember.status === 'disabled' || currentMember.role !== 'admin') throw new Error('Unauthorized.');
 
     const invitedUser = await ctx.db
       .query('users')
@@ -228,13 +246,19 @@ export const inviteByEmail = mutation({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.workspaceId).eq('userId', invitedUser._id))
       .unique();
 
-    if (existingMember) return { status: 'already_member' as const };
+    if (existingMember && existingMember.status !== 'disabled') return { status: 'already_member' as const };
 
-    const newMemberId = await ctx.db.insert('members', {
-      userId: invitedUser._id,
-      workspaceId: args.workspaceId,
-      role: 'member',
-    });
+    let newMemberId: Id<'members'>;
+    if (existingMember) {
+      await ctx.db.patch(existingMember._id, { status: 'active' });
+      newMemberId = existingMember._id;
+    } else {
+      newMemberId = await ctx.db.insert('members', {
+        userId: invitedUser._id,
+        workspaceId: args.workspaceId,
+        role: 'member',
+      });
+    }
 
     const existingConversation = await ctx.db
       .query('conversations')
@@ -268,6 +292,14 @@ export const inviteByEmail = mutation({
       memberId: currentMember._id,
       workspaceId: args.workspaceId,
       conversationId,
+    });
+
+    await ctx.db.insert('memberEvents', {
+      workspaceId: args.workspaceId,
+      actorName: inviterName,
+      targetName: invitedUser.name ?? 'Unknown',
+      targetImage: invitedUser.image ?? undefined,
+      action: 'joined',
     });
 
     return { status: 'success' as const };

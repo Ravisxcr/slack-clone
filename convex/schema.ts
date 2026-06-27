@@ -13,6 +13,7 @@ const schema = defineSchema({
     userId: v.id('users'),
     workspaceId: v.id('workspaces'),
     role: v.union(v.literal('admin'), v.literal('member')),
+    status: v.optional(v.union(v.literal('active'), v.literal('disabled'))),
   })
     .index('by_user_id', ['userId'])
     .index('by_workspace_id', ['workspaceId'])
@@ -52,6 +53,13 @@ const schema = defineSchema({
     .index('by_workspace_id', ['workspaceId'])
     .index('by_message_id', ['messageId'])
     .index('by_member_id', ['memberId']),
+  memberEvents: defineTable({
+    workspaceId: v.id('workspaces'),
+    actorName: v.string(),
+    targetName: v.string(),
+    targetImage: v.optional(v.string()),
+    action: v.union(v.literal('joined'), v.literal('removed')),
+  }).index('by_workspace_id', ['workspaceId']),
 });
 
 export default schema;
