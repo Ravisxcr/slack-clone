@@ -23,6 +23,7 @@ interface MessageListProps {
   loadMore: () => void;
   isLoadingMore: boolean;
   canLoadMore: boolean;
+  otherMemberLastReadTime?: number;
 }
 
 const formatDateLabel = (dateStr: string) => {
@@ -44,6 +45,7 @@ export const MessageList = ({
   loadMore,
   isLoadingMore,
   canLoadMore,
+  otherMemberLastReadTime,
 }: MessageListProps) => {
   const [editingId, setEditingId] = useState<Id<'messages'> | null>(null);
 
@@ -107,6 +109,7 @@ export const MessageList = ({
                 setEditingId={setEditingId}
                 isCompact={isCompact}
                 hideThreadButton={variant === 'thread'}
+                otherMemberLastReadTime={variant === 'conversation' ? otherMemberLastReadTime : undefined}
               />
             );
           })}

@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronLeft, Loader, MessagesSquare } from 'lucide-react';
+import { Check, CheckCheck, ChevronLeft, Loader, MessagesSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -96,6 +96,11 @@ export const DmsPanel = ({ onClose }: DmsPanelProps) => {
                       {dm.lastMessage && (
                         <>
                           <span className="text-white/30">·</span>
+                          {dm.lastMessage.isMine && (
+                            dm.lastMessageReadByOther
+                              ? <CheckCheck className="size-3 shrink-0 text-blue-400" />
+                              : <Check className="size-3 shrink-0 text-white/40" />
+                          )}
                           <span className={`truncate text-xs ${dm.isUnread ? 'font-medium text-white/80' : 'text-white/40'}`}>
                             {dm.lastMessage.isMine ? 'You: ' : ''}{extractPlainText(dm.lastMessage.body)}
                           </span>

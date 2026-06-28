@@ -3,6 +3,17 @@ import { v } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
 
+export const getLastRead = query({
+  args: { conversationId: v.id('conversations') },
+  handler: async (ctx, { conversationId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const conv = await ctx.db.get(conversationId);
+    if (!conv) return null;
+    return conv.lastRead ?? {};
+  },
+});
+
 export const createOrGet = mutation({
   args: {
     workspaceId: v.id('workspaces'),
@@ -90,6 +101,13 @@ export const getAllForCurrentUser = query({
           lastMessage._creationTime > lastReadTime &&
           lastMessage.memberId !== membership._id;
 
+        const otherMemberLastReadTime = conv.lastRead?.[otherMemberId] ?? 0;
+        const lastMessageReadByOther =
+          lastMessage !== null &&
+          lastMessage.memberId === membership._id &&
+          otherMemberLastReadTime > 0 &&
+          lastMessage._creationTime <= otherMemberLastReadTime;
+
         results.push({
           conversationId: conv._id,
           workspaceId: membership.workspaceId,
@@ -105,6 +123,7 @@ export const getAllForCurrentUser = query({
               }
             : null,
           isUnread,
+          lastMessageReadByOther,
         });
       }
     }
