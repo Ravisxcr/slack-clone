@@ -8,7 +8,9 @@ import type { Id } from '@/../convex/_generated/dataModel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Profile } from '@/features/members/components/profile';
 import { Thread } from '@/features/messages/components/thread';
+import { useDesktopNotifications } from '@/hooks/use-desktop-notifications';
 import { usePanel } from '@/hooks/use-panel';
+import { useWorkspaceId } from '@/hooks/use-workspace-id';
 
 import { ActivityPanel } from './activity-panel';
 import { DmsPanel } from './dms-panel';
@@ -18,7 +20,10 @@ import { Toolbar } from './toolbar';
 import { WorkspaceSidebar } from './workspace-sidebar';
 
 const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
+  const workspaceId = useWorkspaceId();
   const { parentMessageId, profileMemberId, onClose } = usePanel();
+
+  useDesktopNotifications(workspaceId);
   const [morePanelOpen, setMorePanelOpen] = useState(false);
   const [activityPanelOpen, setActivityPanelOpen] = useState(false);
   const [dmsPanelOpen, setDmsPanelOpen] = useState(false);
