@@ -1,8 +1,9 @@
 import { format, isToday, isYesterday } from 'date-fns';
-import { Loader } from 'lucide-react';
+import { Check, CheckCheck, Loader } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 
+import { AvailabilityDot, type Availability } from '@/components/availability-dot';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRemoveMessage } from '@/features/messages/api/use-remove-message';
 import { useUpdateMessage } from '@/features/messages/api/use-update-message';
@@ -59,6 +60,8 @@ interface MessageProps {
   threadImage?: string;
   threadName?: string;
   threadTimestamp?: number;
+  otherMemberLastReadTime?: number;
+  authorAvailability?: Availability | null;
 }
 
 const formatFullTime = (date: Date) => {
@@ -84,6 +87,8 @@ export const Message = ({
   threadImage,
   threadName,
   threadTimestamp,
+  otherMemberLastReadTime,
+  authorAvailability,
 }: MessageProps) => {
   const [ConfirmDialog, confirm] = useConfirm('Delete message', 'Are you sure you want to delete this message? This cannot be undone.');
   const { parentMessageId, onOpenMessage, onOpenProfile, onClose } = usePanel();
@@ -94,6 +99,11 @@ export const Message = ({
 
   const avatarFallback = authorName.charAt(0).toUpperCase();
   const isPending = isUpdatingMessage || isRemovingMessage || isTogglingReaction;
+
+  const showStatus = isAuthor && otherMemberLastReadTime !== undefined;
+  const isRead = showStatus && createdAt <= otherMemberLastReadTime!;
+  const DeliveryIcon = isRead ? CheckCheck : Check;
+  const deliveryIconClass = isRead ? 'text-blue-400' : 'text-muted-foreground/60';
 
   const handleUpdate = ({ body }: { body: string }) => {
     updateMessage(
@@ -154,11 +164,16 @@ export const Message = ({
           )}
         >
           <div className="flex items-start gap-2">
-            <Hint label={formatFullTime(new Date(createdAt))}>
-              <button className="w-[40px] text-center text-sm leading-[22px] text-muted-foreground opacity-0 hover:underline group-hover:opacity-100">
-                {format(new Date(createdAt), 'hh:mm')}
-              </button>
-            </Hint>
+            <div className="flex w-[40px] flex-col items-center">
+              <Hint label={formatFullTime(new Date(createdAt))}>
+                <button className="w-full text-center text-sm leading-[22px] text-muted-foreground opacity-0 hover:underline group-hover:opacity-100">
+                  {format(new Date(createdAt), 'hh:mm')}
+                </button>
+              </Hint>
+              {showStatus && (
+                <DeliveryIcon className={cn('size-3 opacity-0 group-hover:opacity-100', deliveryIconClass)} />
+              )}
+            </div>
 
             {isEditing ? (
               <div className="size-full">
@@ -217,12 +232,14 @@ export const Message = ({
         )}
       >
         <div className="flex items-start gap-2">
-          <button onClick={() => onOpenProfile(memberId)}>
+          <button onClick={() => onOpenProfile(memberId)} className="relative shrink-0">
             <Avatar>
               <AvatarImage alt={authorName} src={authorImage} />
-
               <AvatarFallback>{avatarFallback}</AvatarFallback>
             </Avatar>
+            <span className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5">
+              <AvailabilityDot availability={authorAvailability} size="sm" borderColor="border-background" />
+            </span>
           </button>
 
           {isEditing ? (
@@ -237,7 +254,7 @@ export const Message = ({
             </div>
           ) : (
             <div className="flex w-full flex-col overflow-hidden">
-              <div className="text-sm">
+              <div className="flex items-center gap-1 text-sm">
                 <button onClick={() => onOpenProfile(memberId)} className="font-bold text-primary hover:underline">
                   {authorName}
                 </button>
@@ -247,6 +264,8 @@ export const Message = ({
                 <Hint label={formatFullTime(new Date(createdAt))}>
                   <button className="text-xs text-muted-foreground hover:underline">{format(new Date(createdAt), 'h:mm a')}</button>
                 </Hint>
+
+                {showStatus && <DeliveryIcon className={cn('size-3.5', deliveryIconClass)} />}
               </div>
 
               <Renderer value={body} />

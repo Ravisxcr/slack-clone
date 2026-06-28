@@ -1,7 +1,18 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 
-import { mutation } from './_generated/server';
+import { mutation, query } from './_generated/server';
+
+export const getLastRead = query({
+  args: { conversationId: v.id('conversations') },
+  handler: async (ctx, { conversationId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const conv = await ctx.db.get(conversationId);
+    if (!conv) return null;
+    return conv.lastRead ?? {};
+  },
+});
 
 export const createOrGet = mutation({
   args: {
@@ -42,5 +53,140 @@ export const createOrGet = mutation({
     });
 
     return conversationId;
+  },
+});
+
+export const getAllForCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const memberships = await ctx.db
+      .query('members')
+      .withIndex('by_user_id', (q) => q.eq('userId', userId))
+      .collect();
+
+    const activeMemberships = memberships.filter((m) => m.status !== 'disabled');
+    const results = [];
+
+    for (const membership of activeMemberships) {
+      const workspace = await ctx.db.get(membership.workspaceId);
+      if (!workspace) continue;
+
+      const conversations = await ctx.db
+        .query('conversations')
+        .withIndex('by_workspace_id', (q) => q.eq('workspaceId', membership.workspaceId))
+        .collect();
+
+      for (const conv of conversations) {
+        if (conv.memberOneId !== membership._id && conv.memberTwoId !== membership._id) continue;
+
+        const otherMemberId = conv.memberOneId === membership._id ? conv.memberTwoId : conv.memberOneId;
+        const otherMember = await ctx.db.get(otherMemberId);
+        if (!otherMember) continue;
+
+        const otherUser = await ctx.db.get(otherMember.userId);
+        if (!otherUser) continue;
+
+        const lastMessage = await ctx.db
+          .query('messages')
+          .withIndex('by_conversation_id', (q) => q.eq('conversationId', conv._id))
+          .order('desc')
+          .first();
+
+        const lastReadTime = conv.lastRead?.[membership._id] ?? 0;
+        const isUnread =
+          lastMessage !== null &&
+          lastMessage._creationTime > lastReadTime &&
+          lastMessage.memberId !== membership._id;
+
+        const otherMemberLastReadTime = conv.lastRead?.[otherMemberId] ?? 0;
+        const lastMessageReadByOther =
+          lastMessage !== null &&
+          lastMessage.memberId === membership._id &&
+          otherMemberLastReadTime > 0 &&
+          lastMessage._creationTime <= otherMemberLastReadTime;
+
+        const presence = await ctx.db
+          .query('userPresence')
+          .withIndex('by_user_id', (q) => q.eq('userId', otherMember.userId))
+          .unique();
+        const now = Date.now();
+        const statusExpired = presence?.customStatusExpiry != null && presence.customStatusExpiry < now;
+
+        results.push({
+          conversationId: conv._id,
+          workspaceId: membership.workspaceId,
+          workspaceName: workspace.name,
+          otherMemberId: otherMember._id,
+          otherUserName: otherUser.name ?? 'Unknown',
+          otherUserImage: otherUser.image,
+          otherUserAvailability: presence?.availability ?? 'active',
+          otherUserCustomStatus: statusExpired ? null : (presence?.customStatus ?? null),
+          lastMessage: lastMessage
+            ? {
+                body: lastMessage.body,
+                createdAt: lastMessage._creationTime,
+                isMine: lastMessage.memberId === membership._id,
+              }
+            : null,
+          isUnread,
+          lastMessageReadByOther,
+        });
+      }
+    }
+
+    results.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt ?? 0;
+      const bTime = b.lastMessage?.createdAt ?? 0;
+      return bTime - aTime;
+    });
+
+    return results;
+  },
+});
+
+export const getUnreadDmCountGlobal = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return 0;
+
+    const memberships = await ctx.db
+      .query('members')
+      .withIndex('by_user_id', (q) => q.eq('userId', userId))
+      .collect();
+
+    const activeMemberships = memberships.filter((m) => m.status !== 'disabled');
+    let total = 0;
+
+    for (const membership of activeMemberships) {
+      const conversations = await ctx.db
+        .query('conversations')
+        .withIndex('by_workspace_id', (q) => q.eq('workspaceId', membership.workspaceId))
+        .collect();
+
+      for (const conv of conversations) {
+        if (conv.memberOneId !== membership._id && conv.memberTwoId !== membership._id) continue;
+
+        const lastReadTime = conv.lastRead?.[membership._id] ?? 0;
+
+        const unread = await ctx.db
+          .query('messages')
+          .withIndex('by_conversation_id', (q) => q.eq('conversationId', conv._id))
+          .filter((q) =>
+            q.and(
+              q.gt(q.field('_creationTime'), lastReadTime),
+              q.neq(q.field('memberId'), membership._id),
+            ),
+          )
+          .collect();
+
+        total += unread.length;
+      }
+    }
+
+    return total;
   },
 });

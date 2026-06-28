@@ -2,6 +2,7 @@ import { differenceInMinutes, format, isToday, isYesterday } from 'date-fns';
 import { Loader } from 'lucide-react';
 import { useState } from 'react';
 
+import { type Availability } from '@/components/availability-dot';
 import { useCurrentMember } from '@/features/members/api/use-current-member';
 import type { GetMessagesReturnType } from '@/features/messages/api/use-get-messages';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
@@ -16,6 +17,7 @@ const TIME_THRESHOLD = 5;
 interface MessageListProps {
   memberName?: string;
   memberImage?: string;
+  memberAvailability?: Availability | null;
   channelName?: string;
   channelCreationTime?: number;
   variant?: 'channel' | 'thread' | 'conversation';
@@ -23,6 +25,7 @@ interface MessageListProps {
   loadMore: () => void;
   isLoadingMore: boolean;
   canLoadMore: boolean;
+  otherMemberLastReadTime?: number;
 }
 
 const formatDateLabel = (dateStr: string) => {
@@ -37,6 +40,7 @@ const formatDateLabel = (dateStr: string) => {
 export const MessageList = ({
   memberName,
   memberImage,
+  memberAvailability,
   channelName,
   channelCreationTime,
   data,
@@ -44,6 +48,7 @@ export const MessageList = ({
   loadMore,
   isLoadingMore,
   canLoadMore,
+  otherMemberLastReadTime,
 }: MessageListProps) => {
   const [editingId, setEditingId] = useState<Id<'messages'> | null>(null);
 
@@ -107,6 +112,12 @@ export const MessageList = ({
                 setEditingId={setEditingId}
                 isCompact={isCompact}
                 hideThreadButton={variant === 'thread'}
+                otherMemberLastReadTime={variant === 'conversation' ? otherMemberLastReadTime : undefined}
+                authorAvailability={
+                  variant === 'conversation' && message.memberId !== currentMember?._id
+                    ? memberAvailability
+                    : undefined
+                }
               />
             );
           })}
@@ -142,7 +153,7 @@ export const MessageList = ({
       )}
 
       {variant === 'channel' && channelName && channelCreationTime && <ChannelHero name={channelName} creationTime={channelCreationTime} />}
-      {variant === 'conversation' && <ConversationHero name={memberName} image={memberImage} />}
+      {variant === 'conversation' && <ConversationHero name={memberName} image={memberImage} availability={memberAvailability} />}
     </div>
   );
 };

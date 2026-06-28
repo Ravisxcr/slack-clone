@@ -32,9 +32,19 @@ export const getById = query({
 
     if (!user) return null;
 
+    const presence = await ctx.db
+      .query('userPresence')
+      .withIndex('by_user_id', (q) => q.eq('userId', member.userId))
+      .unique();
+    const now = Date.now();
+    const statusExpired = presence?.customStatusExpiry != null && presence.customStatusExpiry < now;
+
     return {
       ...member,
       user,
+      availability: presence?.availability ?? ('active' as const),
+      customStatus: statusExpired ? null : (presence?.customStatus ?? null),
+      customStatusExpiry: statusExpired ? null : (presence?.customStatusExpiry ?? null),
     };
   },
 });
@@ -61,12 +71,22 @@ export const get = query({
     const members = [];
 
     for (const member of data) {
+      if (member.status === 'disabled') continue;
+
       const user = await populateUser(ctx, member.userId);
 
       if (user) {
+        const presence = await ctx.db
+          .query('userPresence')
+          .withIndex('by_user_id', (q) => q.eq('userId', member.userId))
+          .unique();
+        const now = Date.now();
+        const statusExpired = presence?.customStatusExpiry != null && presence.customStatusExpiry < now;
         members.push({
           ...member,
           user,
+          availability: presence?.availability ?? ('active' as const),
+          customStatus: statusExpired ? null : (presence?.customStatus ?? null),
         });
       }
     }
@@ -87,7 +107,7 @@ export const current = query({
       .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', args.workspaceId).eq('userId', userId))
       .unique();
 
-    if (!member) return null;
+    if (!member || member.status === 'disabled') return null;
 
     return member;
   },
@@ -146,28 +166,27 @@ export const remove = mutation({
 
     if (currentMember._id === args.id && currentMember.role === 'admin') throw new Error('Cannot remove if self is an admin.');
 
-    const [messages, reactions, conversations] = await Promise.all([
-      ctx.db
-        .query('messages')
-        .withIndex('by_member_id', (q) => q.eq('memberId', member._id))
-        .collect(),
-      ctx.db
-        .query('reactions')
-        .withIndex('by_member_id', (q) => q.eq('memberId', member._id))
-        .collect(),
-      ctx.db
-        .query('conversations')
-        .filter((q) => q.or(q.eq(q.field('memberOneId'), member._id), q.eq(q.field('memberTwoId'), member._id)))
-        .collect(),
-    ]);
+    const targetUser = await populateUser(ctx, member.userId);
+    const actorUser = await ctx.db.get(userId);
 
-    for (const message of messages) await ctx.db.delete(message._id);
+    await ctx.db.patch(args.id, { status: 'disabled' });
 
-    for (const reaction of reactions) await ctx.db.delete(reaction._id);
+    await ctx.db.insert('memberEvents', {
+      workspaceId: member.workspaceId,
+      actorName: actorUser?.name ?? 'Unknown',
+      targetName: targetUser?.name ?? 'Unknown',
+      targetImage: targetUser?.image ?? undefined,
+      action: 'removed',
+    });
 
-    for (const conversation of conversations) await ctx.db.delete(conversation._id);
-
-    await ctx.db.delete(args.id);
+    await ctx.db.insert('activityEvents', {
+      workspaceId: member.workspaceId,
+      targetUserId: member.userId,
+      actorName: actorUser?.name ?? 'Unknown',
+      actorImage: actorUser?.image ?? undefined,
+      action: 'removed_from_workspace',
+      isRead: false,
+    });
 
     return args.id;
   },

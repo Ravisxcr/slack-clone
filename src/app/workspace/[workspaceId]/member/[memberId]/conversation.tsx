@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 
 import type { Id } from '@/../convex/_generated/dataModel';
 import { MessageList } from '@/components/message-list';
+import { useGetConversationLastRead } from '@/features/conversations/api/use-get-conversation-last-read';
 import { useGetMember } from '@/features/members/api/use-get-member';
 import { useGetMessages } from '@/features/messages/api/use-get-messages';
 import { useMarkConversationRead } from '@/features/messages/api/use-mark-conversation-read';
@@ -27,6 +28,9 @@ export const Conversation = ({ id }: ConversationProps) => {
 
   const { results, status, loadMore } = useGetMessages({ conversationId: id });
 
+  const { data: conversationLastRead } = useGetConversationLastRead({ conversationId: id });
+  const otherMemberLastReadTime = conversationLastRead?.[memberId] ?? 0;
+
   const { mutate: markRead } = useMarkConversationRead();
 
   useEffect(() => {
@@ -43,16 +47,18 @@ export const Conversation = ({ id }: ConversationProps) => {
 
   return (
     <div className="flex h-full flex-col">
-      <Header memberName={member?.user.name} memberImage={member?.user.image} onClick={() => onOpenProfile(memberId)} />
+      <Header memberName={member?.user.name} memberImage={member?.user.image} availability={member?.availability} onClick={() => onOpenProfile(memberId)} />
 
       <MessageList
         data={results}
         variant="conversation"
         memberName={member?.user.name}
         memberImage={member?.user.image}
+        memberAvailability={member?.availability}
         loadMore={loadMore}
         canLoadMore={status === 'CanLoadMore'}
         isLoadingMore={status === 'LoadingMore'}
+        otherMemberLastReadTime={otherMemberLastReadTime}
       />
 
       <ChatInput placeholder={`Message ${member?.user.name}`} conversationId={id} />

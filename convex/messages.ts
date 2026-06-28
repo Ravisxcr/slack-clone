@@ -5,6 +5,20 @@ import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { type QueryCtx, mutation, query } from './_generated/server';
 
+const extractPlainText = (body: string): string => {
+  try {
+    const delta = JSON.parse(body) as { ops?: Array<{ insert?: string | object }> };
+    if (!delta.ops || !Array.isArray(delta.ops)) return body;
+    return delta.ops
+      .map((op) => (typeof op.insert === 'string' ? op.insert : ''))
+      .join('')
+      .replace(/\n+$/, '')
+      .trim();
+  } catch {
+    return body;
+  }
+};
+
 const populateThread = async (ctx: QueryCtx, messageId: Id<'messages'>) => {
   const messages = await ctx.db
     .query('messages')
@@ -58,10 +72,12 @@ const populateMember = (ctx: QueryCtx, memberId: Id<'members'>) => {
 };
 
 const getMember = async (ctx: QueryCtx, workspaceId: Id<'workspaces'>, userId: Id<'users'>) => {
-  return await ctx.db
+  const member = await ctx.db
     .query('members')
     .withIndex('by_workspace_id_user_id', (q) => q.eq('workspaceId', workspaceId).eq('userId', userId))
     .unique();
+  if (!member || member.status === 'disabled') return null;
+  return member;
 };
 
 export const get = query({
@@ -252,6 +268,86 @@ export const create = mutation({
       conversationId: _conversationId,
       parentMessageId: args.parentMessageId,
     });
+
+    const senderUser = await ctx.db.get(userId);
+    const preview = extractPlainText(args.body).slice(0, 100) || undefined;
+
+    // Notify workspace members when a new (non-thread) channel message is sent
+    if (args.channelId && !args.parentMessageId) {
+      const channel = await ctx.db.get(args.channelId);
+
+      const allMembers = await ctx.db
+        .query('members')
+        .withIndex('by_workspace_id', (q) => q.eq('workspaceId', args.workspaceId))
+        .collect();
+
+      await Promise.all(
+        allMembers
+          .filter((m) => m._id !== member._id && m.status !== 'disabled')
+          .map((m) =>
+            ctx.db.insert('activityEvents', {
+              workspaceId: args.workspaceId,
+              targetUserId: m.userId,
+              actorName: senderUser?.name ?? 'Unknown',
+              actorImage: senderUser?.image ?? undefined,
+              action: 'channel_message',
+              channelId: args.channelId,
+              channelName: channel?.name,
+              messagePreview: preview,
+              isRead: false,
+            }),
+          ),
+      );
+    }
+
+    // Notify thread participants when a thread reply is sent
+    if (args.parentMessageId) {
+      const parentMessage = await ctx.db.get(args.parentMessageId);
+      if (parentMessage) {
+        const channel = parentMessage.channelId ? await ctx.db.get(parentMessage.channelId) : null;
+
+        // Collect all prior thread replies to find participants
+        const threadReplies = await ctx.db
+          .query('messages')
+          .withIndex('by_parent_message_id', (q) => q.eq('parentMessageId', args.parentMessageId))
+          .collect();
+
+        // Build set of member IDs to notify: parent author + all prior reply authors
+        const participantMemberIds = new Set<(typeof member)['_id']>();
+        participantMemberIds.add(parentMessage.memberId);
+        for (const reply of threadReplies) {
+          participantMemberIds.add(reply.memberId);
+        }
+        // Exclude the current sender
+        participantMemberIds.delete(member._id);
+
+        // Resolve to user IDs, skipping disabled members
+        const notifyUserIds = new Set<Id<'users'>>();
+        for (const memberId of participantMemberIds) {
+          const m = await ctx.db.get(memberId);
+          if (m && m.status !== 'disabled') {
+            notifyUserIds.add(m.userId);
+          }
+        }
+
+        await Promise.all(
+          Array.from(notifyUserIds).map((targetUserId) =>
+            ctx.db.insert('activityEvents', {
+              workspaceId: args.workspaceId,
+              targetUserId,
+              actorName: senderUser?.name ?? 'Unknown',
+              actorImage: senderUser?.image ?? undefined,
+              action: 'thread_reply',
+              channelId: parentMessage.channelId,
+              channelName: channel?.name,
+              parentMessageId: args.parentMessageId,
+              messagePreview: preview,
+              isRead: false,
+            }),
+          ),
+        );
+      }
+    }
 
     return messageId;
   },

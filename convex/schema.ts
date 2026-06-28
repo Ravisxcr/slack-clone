@@ -13,6 +13,7 @@ const schema = defineSchema({
     userId: v.id('users'),
     workspaceId: v.id('workspaces'),
     role: v.union(v.literal('admin'), v.literal('member')),
+    status: v.optional(v.union(v.literal('active'), v.literal('disabled'))),
   })
     .index('by_user_id', ['userId'])
     .index('by_workspace_id', ['workspaceId'])
@@ -52,6 +53,41 @@ const schema = defineSchema({
     .index('by_workspace_id', ['workspaceId'])
     .index('by_message_id', ['messageId'])
     .index('by_member_id', ['memberId']),
+  memberEvents: defineTable({
+    workspaceId: v.id('workspaces'),
+    actorName: v.string(),
+    targetName: v.string(),
+    targetImage: v.optional(v.string()),
+    action: v.union(v.literal('joined'), v.literal('removed')),
+  }).index('by_workspace_id', ['workspaceId']),
+  userPresence: defineTable({
+    userId: v.id('users'),
+    availability: v.union(v.literal('active'), v.literal('away'), v.literal('dnd')),
+    customStatus: v.optional(v.string()),
+    customStatusExpiry: v.optional(v.number()),
+  }).index('by_user_id', ['userId']),
+  activityEvents: defineTable({
+    workspaceId: v.id('workspaces'),
+    targetUserId: v.id('users'),
+    actorName: v.string(),
+    actorImage: v.optional(v.string()),
+    action: v.union(
+      v.literal('added_to_workspace'),
+      v.literal('removed_from_workspace'),
+      v.literal('message_mention'),
+      v.literal('channel_message'),
+      v.literal('thread_reply'),
+      v.literal('emoji_reaction'),
+    ),
+    channelId: v.optional(v.id('channels')),
+    channelName: v.optional(v.string()),
+    parentMessageId: v.optional(v.id('messages')),
+    messagePreview: v.optional(v.string()),
+    emoji: v.optional(v.string()),
+    isRead: v.boolean(),
+  })
+    .index('by_workspace_and_target', ['workspaceId', 'targetUserId'])
+    .index('by_target_user', ['targetUserId']),
 });
 
 export default schema;
