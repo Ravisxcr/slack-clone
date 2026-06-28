@@ -3,6 +3,7 @@ import { Check, CheckCheck, Loader } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 
+import { AvailabilityDot, type Availability } from '@/components/availability-dot';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRemoveMessage } from '@/features/messages/api/use-remove-message';
 import { useUpdateMessage } from '@/features/messages/api/use-update-message';
@@ -60,6 +61,7 @@ interface MessageProps {
   threadName?: string;
   threadTimestamp?: number;
   otherMemberLastReadTime?: number;
+  authorAvailability?: Availability | null;
 }
 
 const formatFullTime = (date: Date) => {
@@ -86,6 +88,7 @@ export const Message = ({
   threadName,
   threadTimestamp,
   otherMemberLastReadTime,
+  authorAvailability,
 }: MessageProps) => {
   const [ConfirmDialog, confirm] = useConfirm('Delete message', 'Are you sure you want to delete this message? This cannot be undone.');
   const { parentMessageId, onOpenMessage, onOpenProfile, onClose } = usePanel();
@@ -229,12 +232,14 @@ export const Message = ({
         )}
       >
         <div className="flex items-start gap-2">
-          <button onClick={() => onOpenProfile(memberId)}>
+          <button onClick={() => onOpenProfile(memberId)} className="relative shrink-0">
             <Avatar>
               <AvatarImage alt={authorName} src={authorImage} />
-
               <AvatarFallback>{avatarFallback}</AvatarFallback>
             </Avatar>
+            <span className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5">
+              <AvailabilityDot availability={authorAvailability} size="sm" borderColor="border-background" />
+            </span>
           </button>
 
           {isEditing ? (

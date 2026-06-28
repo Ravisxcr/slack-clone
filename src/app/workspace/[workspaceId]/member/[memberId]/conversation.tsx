@@ -47,13 +47,14 @@ export const Conversation = ({ id }: ConversationProps) => {
 
   return (
     <div className="flex h-full flex-col">
-      <Header memberName={member?.user.name} memberImage={member?.user.image} onClick={() => onOpenProfile(memberId)} />
+      <Header memberName={member?.user.name} memberImage={member?.user.image} availability={member?.availability} onClick={() => onOpenProfile(memberId)} />
 
       <MessageList
         data={results}
         variant="conversation"
         memberName={member?.user.name}
         memberImage={member?.user.image}
+        memberAvailability={member?.availability}
         loadMore={loadMore}
         canLoadMore={status === 'CanLoadMore'}
         isLoadingMore={status === 'LoadingMore'}

@@ -32,9 +32,18 @@ export const getById = query({
 
     if (!user) return null;
 
+    const presence = await ctx.db
+      .query('userPresence')
+      .withIndex('by_user_id', (q) => q.eq('userId', member.userId))
+      .unique();
+    const now = Date.now();
+    const statusExpired = presence?.customStatusExpiry != null && presence.customStatusExpiry < now;
+
     return {
       ...member,
       user,
+      availability: presence?.availability ?? ('active' as const),
+      customStatus: statusExpired ? null : (presence?.customStatus ?? null),
     };
   },
 });
@@ -66,9 +75,17 @@ export const get = query({
       const user = await populateUser(ctx, member.userId);
 
       if (user) {
+        const presence = await ctx.db
+          .query('userPresence')
+          .withIndex('by_user_id', (q) => q.eq('userId', member.userId))
+          .unique();
+        const now = Date.now();
+        const statusExpired = presence?.customStatusExpiry != null && presence.customStatusExpiry < now;
         members.push({
           ...member,
           user,
+          availability: presence?.availability ?? ('active' as const),
+          customStatus: statusExpired ? null : (presence?.customStatus ?? null),
         });
       }
     }

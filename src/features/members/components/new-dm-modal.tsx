@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { AvailabilityDot } from '@/components/availability-dot';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -50,10 +51,15 @@ export const NewDmModal = () => {
               onClick={() => handleSelect(member._id)}
               className="flex w-full items-center gap-3 px-4 py-2 text-sm hover:bg-muted"
             >
-              <Avatar className="size-7">
-                <AvatarImage src={member.user.image} alt={member.user.name} />
-                <AvatarFallback className="text-xs">{member.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
+              <div className="relative shrink-0">
+                <Avatar className="size-7">
+                  <AvatarImage src={member.user.image} alt={member.user.name} />
+                  <AvatarFallback className="text-xs">{member.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5">
+                  <AvailabilityDot availability={member.availability} borderColor="border-background" />
+                </span>
+              </div>
               <span>{member.user.name}</span>
             </button>
           ))}

@@ -108,6 +108,13 @@ export const getAllForCurrentUser = query({
           otherMemberLastReadTime > 0 &&
           lastMessage._creationTime <= otherMemberLastReadTime;
 
+        const presence = await ctx.db
+          .query('userPresence')
+          .withIndex('by_user_id', (q) => q.eq('userId', otherMember.userId))
+          .unique();
+        const now = Date.now();
+        const statusExpired = presence?.customStatusExpiry != null && presence.customStatusExpiry < now;
+
         results.push({
           conversationId: conv._id,
           workspaceId: membership.workspaceId,
@@ -115,6 +122,8 @@ export const getAllForCurrentUser = query({
           otherMemberId: otherMember._id,
           otherUserName: otherUser.name ?? 'Unknown',
           otherUserImage: otherUser.image,
+          otherUserAvailability: presence?.availability ?? 'active',
+          otherUserCustomStatus: statusExpired ? null : (presence?.customStatus ?? null),
           lastMessage: lastMessage
             ? {
                 body: lastMessage.body,

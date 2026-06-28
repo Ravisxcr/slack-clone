@@ -60,6 +60,12 @@ const schema = defineSchema({
     targetImage: v.optional(v.string()),
     action: v.union(v.literal('joined'), v.literal('removed')),
   }).index('by_workspace_id', ['workspaceId']),
+  userPresence: defineTable({
+    userId: v.id('users'),
+    availability: v.union(v.literal('active'), v.literal('away'), v.literal('dnd')),
+    customStatus: v.optional(v.string()),
+    customStatusExpiry: v.optional(v.number()),
+  }).index('by_user_id', ['userId']),
   activityEvents: defineTable({
     workspaceId: v.id('workspaces'),
     targetUserId: v.id('users'),

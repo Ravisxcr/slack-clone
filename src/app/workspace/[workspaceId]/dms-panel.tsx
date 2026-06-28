@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Check, CheckCheck, ChevronLeft, Loader, MessagesSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { AvailabilityDot } from '@/components/availability-dot';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useGetAllDms } from '@/features/conversations/api/use-get-all-dms';
 
@@ -70,12 +71,17 @@ export const DmsPanel = ({ onClose }: DmsPanelProps) => {
                   onClick={() => handleDmClick(dm.workspaceId, dm.otherMemberId)}
                   className={`flex w-full items-center gap-x-3 rounded-md px-2 py-2.5 text-left hover:bg-white/10 ${dm.isUnread ? 'bg-white/5' : ''}`}
                 >
-                  <Avatar className="size-8 shrink-0">
-                    <AvatarImage src={dm.otherUserImage} />
-                    <AvatarFallback className="text-xs">
-                      {dm.otherUserName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative shrink-0">
+                    <Avatar className="size-8">
+                      <AvatarImage src={dm.otherUserImage} />
+                      <AvatarFallback className="text-xs">
+                        {dm.otherUserName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5">
+                      <AvailabilityDot availability={dm.otherUserAvailability} />
+                    </span>
+                  </div>
 
                   <div className="flex min-w-0 flex-1 flex-col gap-y-0.5">
                     <div className="flex items-baseline justify-between gap-x-1">
@@ -91,7 +97,7 @@ export const DmsPanel = ({ onClose }: DmsPanelProps) => {
 
                     <div className="flex items-center gap-x-1">
                       <span className="truncate text-xs text-white/40">
-                        {dm.workspaceName}
+                        {dm.otherUserCustomStatus || dm.workspaceName}
                       </span>
                       {dm.lastMessage && (
                         <>
