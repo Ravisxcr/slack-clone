@@ -76,10 +76,14 @@ const schema = defineSchema({
       v.literal('removed_from_workspace'),
       v.literal('message_mention'),
       v.literal('channel_message'),
+      v.literal('thread_reply'),
+      v.literal('emoji_reaction'),
     ),
     channelId: v.optional(v.id('channels')),
     channelName: v.optional(v.string()),
+    parentMessageId: v.optional(v.id('messages')),
     messagePreview: v.optional(v.string()),
+    emoji: v.optional(v.string()),
     isRead: v.boolean(),
   })
     .index('by_workspace_and_target', ['workspaceId', 'targetUserId'])

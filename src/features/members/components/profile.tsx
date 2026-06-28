@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import type { Id } from '@/../convex/_generated/dataModel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { AvailabilityDot, type Availability } from '@/components/availability-dot';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,6 +136,23 @@ export const Profile = ({ memberId, onClose }: ProfileProps) => {
 
   const avatarFallback = member.user.name?.charAt(0).toUpperCase() ?? '?';
 
+  const availabilityLabels: Record<Availability, string> = {
+    active: 'Active',
+    away: 'Away',
+    dnd: 'Do not disturb',
+  };
+
+  const formatExpiry = (expiry: number): string => {
+    const now = new Date();
+    const expiryDate = new Date(expiry);
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const timeStr = expiryDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (expiryDate.toDateString() === now.toDateString()) return `until ${timeStr}`;
+    if (expiryDate.toDateString() === tomorrow.toDateString()) return `until Tomorrow at ${timeStr}`;
+    return `until ${expiryDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}`;
+  };
+
   return (
     <>
       <LeaveDialog />
@@ -160,6 +178,21 @@ export const Profile = ({ memberId, onClose }: ProfileProps) => {
 
         <div className="flex flex-col p-4">
           <p className="text-xl font-bold">{member.user.name}</p>
+
+          <div className="mt-1 flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <AvailabilityDot availability={member.availability} size="sm" borderColor="border-background" />
+              <span className="text-sm text-muted-foreground">{availabilityLabels[member.availability]}</span>
+            </div>
+
+            {member.customStatus && (
+              <p className="text-sm">{member.customStatus}</p>
+            )}
+
+            {member.customStatus && member.customStatusExpiry && (
+              <p className="text-xs text-muted-foreground">{formatExpiry(member.customStatusExpiry)}</p>
+            )}
+          </div>
 
           {currentMember.role === 'admin' && currentMember._id !== memberId ? (
             <div className="mt-4 flex items-center gap-2">

@@ -44,6 +44,7 @@ export const getById = query({
       user,
       availability: presence?.availability ?? ('active' as const),
       customStatus: statusExpired ? null : (presence?.customStatus ?? null),
+      customStatusExpiry: statusExpired ? null : (presence?.customStatusExpiry ?? null),
     };
   },
 });

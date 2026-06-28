@@ -9,9 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useGetActivityEvents } from '@/features/activities/api/use-get-activity-events';
 import { useMarkActivityRead } from '@/features/activities/api/use-mark-activity-read';
+import { useParentMessageId } from '@/features/messages/store/use-parent-message-id';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
 
-type ActivityAction = 'added_to_workspace' | 'removed_from_workspace' | 'message_mention' | 'channel_message';
+type ActivityAction = 'added_to_workspace' | 'removed_from_workspace' | 'message_mention' | 'channel_message' | 'thread_reply' | 'emoji_reaction';
 
 interface ActivityEvent {
   _id: string;
@@ -23,7 +24,9 @@ interface ActivityEvent {
   action: ActivityAction;
   channelId?: string;
   channelName?: string;
+  parentMessageId?: string;
   messagePreview?: string;
+  emoji?: string;
   isRead: boolean;
 }
 
@@ -57,6 +60,20 @@ const ACTION_CONFIG: Record<
     label: (e: ActivityEvent) =>
       e.channelName ? `${e.actorName} sent a message in #${e.channelName}` : `${e.actorName} sent a message`,
   },
+  thread_reply: {
+    icon: MessageSquare,
+    badgeClass: 'bg-violet-500',
+    label: (e: ActivityEvent) =>
+      e.channelName ? `${e.actorName} replied in a thread in #${e.channelName}` : `${e.actorName} replied in a thread`,
+  },
+  emoji_reaction: {
+    icon: MessageSquare,
+    badgeClass: 'bg-amber-500',
+    label: (e: ActivityEvent) =>
+      e.emoji
+        ? `${e.actorName} reacted ${e.emoji} to your message`
+        : `${e.actorName} reacted to your message`,
+  },
 };
 
 export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
@@ -64,6 +81,7 @@ export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
   const router = useRouter();
   const { data: events, isLoading } = useGetActivityEvents({ workspaceId });
   const { mutate: markAllRead } = useMarkActivityRead();
+  const [, setParentMessageId] = useParentMessageId();
 
   const unreadCount = events?.filter((e) => !e.isRead).length ?? 0;
 
@@ -76,7 +94,11 @@ export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
   };
 
   const handleEventClick = (event: ActivityEvent) => {
-    if ((event.action === 'channel_message' || event.action === 'message_mention') && event.channelId) {
+    if ((event.action === 'thread_reply' || (event.action === 'emoji_reaction' && event.parentMessageId)) && event.channelId && event.parentMessageId) {
+      router.push(`/workspace/${workspaceId}/channel/${event.channelId}`);
+      setParentMessageId(event.parentMessageId);
+      onClose();
+    } else if ((event.action === 'channel_message' || event.action === 'message_mention' || event.action === 'emoji_reaction') && event.channelId) {
       router.push(`/workspace/${workspaceId}/channel/${event.channelId}`);
       onClose();
     }
@@ -126,7 +148,7 @@ export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
               const config = ACTION_CONFIG[event.action];
               const ActionIcon = config.icon;
               const isNavigable =
-                (event.action === 'channel_message' || event.action === 'message_mention') && !!event.channelId;
+                (event.action === 'channel_message' || event.action === 'message_mention' || event.action === 'thread_reply' || event.action === 'emoji_reaction') && !!event.channelId;
               return (
                 <li
                   key={event._id}

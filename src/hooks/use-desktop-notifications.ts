@@ -49,6 +49,16 @@ export const useDesktopNotifications = (workspaceId: Id<'workspaces'>) => {
           title = `#${event.channelName ?? 'channel'}`;
           body = `${event.actorName}: ${event.messagePreview ?? 'New message'}`;
           break;
+        case 'thread_reply':
+          title = event.channelName ? `Thread reply in #${event.channelName}` : 'New thread reply';
+          body = `${event.actorName}: ${event.messagePreview ?? 'New reply'}`;
+          break;
+        case 'emoji_reaction':
+          title = event.emoji
+            ? `${event.emoji} reaction from ${event.actorName}`
+            : `${event.actorName} reacted to your message`;
+          body = event.messagePreview ?? '';
+          break;
         case 'message_mention':
           title = `${event.actorName} mentioned you`;
           body = event.messagePreview ?? '';
