@@ -52,6 +52,15 @@ export const join = mutation({
       action: 'joined',
     });
 
+    await ctx.db.insert('activityEvents', {
+      workspaceId: workspace._id,
+      targetUserId: userId,
+      actorName: joiningUser?.name ?? 'Unknown',
+      actorImage: joiningUser?.image ?? undefined,
+      action: 'added_to_workspace',
+      isRead: false,
+    });
+
     return workspace._id;
   },
 });
@@ -300,6 +309,15 @@ export const inviteByEmail = mutation({
       targetName: invitedUser.name ?? 'Unknown',
       targetImage: invitedUser.image ?? undefined,
       action: 'joined',
+    });
+
+    await ctx.db.insert('activityEvents', {
+      workspaceId: args.workspaceId,
+      targetUserId: invitedUser._id,
+      actorName: inviterName,
+      actorImage: inviterUser?.image ?? undefined,
+      action: 'added_to_workspace',
+      isRead: false,
     });
 
     return { status: 'success' as const };

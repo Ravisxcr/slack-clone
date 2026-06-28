@@ -161,6 +161,15 @@ export const remove = mutation({
       action: 'removed',
     });
 
+    await ctx.db.insert('activityEvents', {
+      workspaceId: member.workspaceId,
+      targetUserId: member.userId,
+      actorName: actorUser?.name ?? 'Unknown',
+      actorImage: actorUser?.image ?? undefined,
+      action: 'removed_from_workspace',
+      isRead: false,
+    });
+
     return args.id;
   },
 });

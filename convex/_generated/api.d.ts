@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as activityEvents from "../activityEvents.js";
 import type * as auth from "../auth.js";
 import type * as channels from "../channels.js";
 import type * as conversations from "../conversations.js";
@@ -27,6 +28,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activityEvents: typeof activityEvents;
   auth: typeof auth;
   channels: typeof channels;
   conversations: typeof conversations;

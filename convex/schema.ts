@@ -60,6 +60,24 @@ const schema = defineSchema({
     targetImage: v.optional(v.string()),
     action: v.union(v.literal('joined'), v.literal('removed')),
   }).index('by_workspace_id', ['workspaceId']),
+  activityEvents: defineTable({
+    workspaceId: v.id('workspaces'),
+    targetUserId: v.id('users'),
+    actorName: v.string(),
+    actorImage: v.optional(v.string()),
+    action: v.union(
+      v.literal('added_to_workspace'),
+      v.literal('removed_from_workspace'),
+      v.literal('message_mention'),
+      v.literal('channel_message'),
+    ),
+    channelId: v.optional(v.id('channels')),
+    channelName: v.optional(v.string()),
+    messagePreview: v.optional(v.string()),
+    isRead: v.boolean(),
+  })
+    .index('by_workspace_and_target', ['workspaceId', 'targetUserId'])
+    .index('by_target_user', ['targetUserId']),
 });
 
 export default schema;

@@ -2,6 +2,7 @@
 
 import { Loader } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
+import { useState } from 'react';
 
 import type { Id } from '@/../convex/_generated/dataModel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
@@ -9,25 +10,71 @@ import { Profile } from '@/features/members/components/profile';
 import { Thread } from '@/features/messages/components/thread';
 import { usePanel } from '@/hooks/use-panel';
 
+import { ActivityPanel } from './activity-panel';
+import { DmsPanel } from './dms-panel';
+import { MorePanel } from './more-panel';
 import { Sidebar } from './sidebar';
 import { Toolbar } from './toolbar';
 import { WorkspaceSidebar } from './workspace-sidebar';
 
 const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
   const { parentMessageId, profileMemberId, onClose } = usePanel();
+  const [morePanelOpen, setMorePanelOpen] = useState(false);
+  const [activityPanelOpen, setActivityPanelOpen] = useState(false);
+  const [dmsPanelOpen, setDmsPanelOpen] = useState(false);
 
   const showPanel = !!parentMessageId || !!profileMemberId;
+
+  const handleHomeClick = () => {
+    setMorePanelOpen(false);
+    setActivityPanelOpen(false);
+    setDmsPanelOpen(false);
+  };
+
+  const handleMoreToggle = () => {
+    setMorePanelOpen((v) => !v);
+    setActivityPanelOpen(false);
+    setDmsPanelOpen(false);
+  };
+
+  const handleActivityToggle = () => {
+    setActivityPanelOpen((v) => !v);
+    setMorePanelOpen(false);
+    setDmsPanelOpen(false);
+  };
+
+  const handleDmsToggle = () => {
+    setDmsPanelOpen((v) => !v);
+    setMorePanelOpen(false);
+    setActivityPanelOpen(false);
+  };
 
   return (
     <div className="h-full">
       <Toolbar />
 
       <div className="flex h-[calc(100vh_-_40px)]">
-        <Sidebar />
+        <Sidebar
+          morePanelOpen={morePanelOpen}
+          onMoreToggle={handleMoreToggle}
+          activityPanelOpen={activityPanelOpen}
+          onActivityToggle={handleActivityToggle}
+          dmsPanelOpen={dmsPanelOpen}
+          onDmsToggle={handleDmsToggle}
+          onHomeClick={handleHomeClick}
+        />
 
         <ResizablePanelGroup id="workspace-panel-group" direction="horizontal" autoSaveId="slack-clone-workspace-layout">
           <ResizablePanel id="workspace-panel-sidebar" defaultSize={20} minSize={11} className="bg-[var(--workspace-sidebar)]">
-            <WorkspaceSidebar />
+            {activityPanelOpen ? (
+              <ActivityPanel onClose={() => setActivityPanelOpen(false)} />
+            ) : morePanelOpen ? (
+              <MorePanel onClose={() => setMorePanelOpen(false)} />
+            ) : dmsPanelOpen ? (
+              <DmsPanel onClose={() => setDmsPanelOpen(false)} />
+            ) : (
+              <WorkspaceSidebar />
+            )}
           </ResizablePanel>
 
           <ResizableHandle withHandle />

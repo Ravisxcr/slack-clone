@@ -5,6 +5,20 @@ import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { type QueryCtx, mutation, query } from './_generated/server';
 
+const extractPlainText = (body: string): string => {
+  try {
+    const delta = JSON.parse(body) as { ops?: Array<{ insert?: string | object }> };
+    if (!delta.ops || !Array.isArray(delta.ops)) return body;
+    return delta.ops
+      .map((op) => (typeof op.insert === 'string' ? op.insert : ''))
+      .join('')
+      .replace(/\n+$/, '')
+      .trim();
+  } catch {
+    return body;
+  }
+};
+
 const populateThread = async (ctx: QueryCtx, messageId: Id<'messages'>) => {
   const messages = await ctx.db
     .query('messages')
@@ -254,6 +268,37 @@ export const create = mutation({
       conversationId: _conversationId,
       parentMessageId: args.parentMessageId,
     });
+
+    // Notify workspace members when a new (non-thread) channel message is sent
+    if (args.channelId && !args.parentMessageId) {
+      const channel = await ctx.db.get(args.channelId);
+      const senderUser = await ctx.db.get(userId);
+
+      const allMembers = await ctx.db
+        .query('members')
+        .withIndex('by_workspace_id', (q) => q.eq('workspaceId', args.workspaceId))
+        .collect();
+
+      const preview = extractPlainText(args.body).slice(0, 100) || undefined;
+
+      await Promise.all(
+        allMembers
+          .filter((m) => m._id !== member._id && m.status !== 'disabled')
+          .map((m) =>
+            ctx.db.insert('activityEvents', {
+              workspaceId: args.workspaceId,
+              targetUserId: m.userId,
+              actorName: senderUser?.name ?? 'Unknown',
+              actorImage: senderUser?.image ?? undefined,
+              action: 'channel_message',
+              channelId: args.channelId,
+              channelName: channel?.name,
+              messagePreview: preview,
+              isRead: false,
+            }),
+          ),
+      );
+    }
 
     return messageId;
   },
