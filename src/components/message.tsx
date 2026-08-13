@@ -166,12 +166,12 @@ export const Message = ({
           <div className="flex items-start gap-2">
             <div className="flex w-[40px] flex-col items-center">
               <Hint label={formatFullTime(new Date(createdAt))}>
-                <button className="w-full text-center text-sm leading-[22px] text-muted-foreground opacity-0 hover:underline group-hover:opacity-100">
+                <button className="w-full text-center text-sm leading-[22px] text-muted-foreground opacity-0 hover:underline max-md:opacity-100 group-hover:opacity-100">
                   {format(new Date(createdAt), 'hh:mm')}
                 </button>
               </Hint>
               {showStatus && (
-                <DeliveryIcon className={cn('size-3 opacity-0 group-hover:opacity-100', deliveryIconClass)} />
+                <DeliveryIcon className={cn('size-3 opacity-0 max-md:opacity-100 group-hover:opacity-100', deliveryIconClass)} />
               )}
             </div>
 

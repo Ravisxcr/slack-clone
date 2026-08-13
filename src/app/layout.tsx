@@ -1,5 +1,5 @@
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { PropsWithChildren } from 'react';
 
@@ -17,6 +17,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = siteConfig;
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (

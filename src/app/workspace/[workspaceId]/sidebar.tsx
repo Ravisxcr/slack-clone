@@ -19,6 +19,8 @@ interface SidebarProps {
   dmsPanelOpen: boolean;
   onDmsToggle: () => void;
   onHomeClick: () => void;
+  /** Renders as a horizontal top bar instead of a vertical rail, for use inside the mobile drawer. */
+  mobileHorizontal?: boolean;
 }
 
 export const Sidebar = ({
@@ -29,6 +31,7 @@ export const Sidebar = ({
   dmsPanelOpen,
   onDmsToggle,
   onHomeClick,
+  mobileHorizontal,
 }: SidebarProps) => {
   const pathname = usePathname();
   const workspaceId = useWorkspaceId();
@@ -36,10 +39,8 @@ export const Sidebar = ({
   const { data: activityUnreadCount } = useGetActivityUnreadCount({ workspaceId });
   const { data: dmUnreadCount } = useGetDmUnreadCount();
 
-  return (
-    <aside className="flex h-full w-[70px] flex-col items-center gap-y-4 bg-[var(--sidebar)] pb-[4px] pt-[9px]">
-      <WorkspaceSwitcher />
-
+  const navButtons = (
+    <>
       <div onClick={onHomeClick}>
         <SidebarButton
           icon={Home}
@@ -66,6 +67,26 @@ export const Sidebar = ({
       <div onClick={onMoreToggle}>
         <SidebarButton icon={MoreHorizontal} label="More" isActive={morePanelOpen} />
       </div>
+    </>
+  );
+
+  if (mobileHorizontal) {
+    return (
+      <div className="flex items-center gap-x-2 border-b bg-[var(--sidebar)] px-3 py-2">
+        <WorkspaceSwitcher />
+
+        <div className="flex flex-1 items-center justify-around gap-x-1">{navButtons}</div>
+
+        <UserButton />
+      </div>
+    );
+  }
+
+  return (
+    <aside className="hidden h-full w-[70px] flex-col items-center gap-y-4 bg-[var(--sidebar)] pb-[4px] pt-[9px] md:flex">
+      <WorkspaceSwitcher />
+
+      {navButtons}
 
       <div className="mt-auto flex flex-col items-center justify-center gap-y-1">
         <UserButton />
