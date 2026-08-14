@@ -97,7 +97,7 @@
 }
 
 .dark .ql-toolbar .ql-formats:not(:last-child) {
-  border-right: 1px solid hsl(var(--border)) !important;
+  border-right: 1px solid hsl(var(--muted-foreground) / 0.3) !important;
 }
 
 .ql-container {

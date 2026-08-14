@@ -28,10 +28,12 @@ SheetOverlay.displayName = 'SheetOverlay';
 
 interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: 'left' | 'right';
+  /** Set when the content already provides its own close affordance. */
+  hideClose?: boolean;
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, SheetContentProps>(
-  ({ className, children, side = 'right', ...props }, ref) => (
+  ({ className, children, side = 'right', hideClose, ...props }, ref) => (
     <SheetPortal>
       <SheetOverlay />
       <DialogPrimitive.Content
@@ -40,17 +42,19 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Co
           'fixed z-50 flex h-full w-80 flex-col gap-0 bg-background shadow-xl transition-transform duration-300 ease-in-out',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
           side === 'left'
-            ? 'left-[70px] top-0 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left'
+            ? 'left-0 top-0 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left'
             : 'right-0 top-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {!hideClose && (
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </SheetPortal>
   ),

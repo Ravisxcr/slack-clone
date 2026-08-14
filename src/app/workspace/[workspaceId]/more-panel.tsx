@@ -163,7 +163,7 @@ export const MorePanel = ({ onClose }: MorePanelProps) => {
                     {canRemove && (
                       <button
                         onClick={() => setMemberToRemove({ id: member._id, name: member.user.name ?? 'Unknown' })}
-                        className="ml-auto shrink-0 rounded p-1 text-white/60 opacity-0 hover:bg-rose-500/20 hover:text-rose-400 group-hover:opacity-100"
+                        className="ml-auto shrink-0 rounded p-1 text-white/60 opacity-0 hover:bg-rose-500/20 hover:text-rose-400 max-md:opacity-100 group-hover:opacity-100"
                         title={`Remove ${member.user.name}`}
                       >
                         <Trash2 className="size-3.5" />

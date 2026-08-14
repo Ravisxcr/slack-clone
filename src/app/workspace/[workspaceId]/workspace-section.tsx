@@ -39,7 +39,7 @@ export const WorkspaceSection = ({ children, hint, label, onNew }: PropsWithChil
               onClick={onNew}
               variant="transparent"
               size="iconSm"
-              className="ml-auto size-6 shrink-0 p-0.5 text-sm text-[var(--workspace-sidebar-fg)] opacity-0 transition-opacity group-hover:opacity-100"
+              className="ml-auto size-6 shrink-0 p-0.5 text-sm text-[var(--workspace-sidebar-fg)] opacity-0 transition-opacity max-md:opacity-100 group-hover:opacity-100"
             >
               <PlusIcon className="size-5" />
             </Button>
