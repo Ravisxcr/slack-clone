@@ -82,6 +82,15 @@ export const ChatInput = ({ placeholder }: ChatInputProps) => {
       await createMessage(values, { throwError: true });
 
       setEditorKey((prevKey) => prevKey + 1);
+
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed && parsed.ambient === true) {
+          toast.success('Reel shared to Reels tab (kept out of chat to avoid clutter)!');
+        }
+      } catch {
+        // ignore
+      }
     } catch (error) {
       toast.error('Failed to send message.');
     } finally {

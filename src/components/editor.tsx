@@ -5,12 +5,12 @@ import Image from 'next/image';
 import Quill, { type QuillOptions } from 'quill';
 import type { Delta, Op } from 'quill/core';
 import 'quill/dist/quill.snow.css';
-import { type MutableRefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type MutableRefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MdSend } from 'react-icons/md';
 import { PiTextAa } from 'react-icons/pi';
 
 import { Button } from '@/components/ui/button';
-import { AmbientShareModal } from '@/features/reels/components/ambient-share-modal';
+import { parseVideoUrl, type ParsedVideo } from '@/lib/video-parser';
 import { cn } from '@/lib/utils';
 
 import { EmojiPopover } from './emoji-popover';
@@ -43,7 +43,18 @@ const Editor = ({
   const [text, setText] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-  const [ambientModalOpen, setAmbientModalOpen] = useState(false);
+  const [ambientMode, setAmbientMode] = useState(true);
+
+  // Detect video link (YouTube Shorts, YouTube, Instagram Reels, TikTok, Direct Video)
+  const detectedVideo: ParsedVideo | null = useMemo(() => {
+    if (!text) return null;
+    const urls = text.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
+    for (const url of urls) {
+      const parsed = parseVideoUrl(url);
+      if (parsed) return parsed;
+    }
+    return null;
+  }, [text]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageElementRef = useRef<HTMLInputElement>(null);
@@ -53,12 +64,14 @@ const Editor = ({
   const placeholderRef = useRef(placeholder);
   const defaultValueRef = useRef(defaultValue);
   const disabledRef = useRef(disabled);
+  const ambientModeRef = useRef(ambientMode);
 
   useLayoutEffect(() => {
     submitRef.current = onSubmit;
     placeholderRef.current = placeholder;
     defaultValueRef.current = defaultValue;
     disabledRef.current = disabled;
+    ambientModeRef.current = ambientMode;
   });
 
   useEffect(() => {
@@ -86,7 +99,15 @@ const Editor = ({
 
                 if (isEmpty) return;
 
-                const body = JSON.stringify(quill.getContents());
+                const urls = text.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
+                const hasVideo = urls.some((u) => parseVideoUrl(u));
+
+                const contents = quill.getContents();
+                const payload = {
+                  ...contents,
+                  ambient: hasVideo ? ambientModeRef.current : undefined,
+                };
+                const body = JSON.stringify(payload);
                 submitRef.current?.({ body, image: addedImage });
               },
             },
@@ -144,11 +165,22 @@ const Editor = ({
     quill.insertText(quill.getSelection()?.index || 0, emoji);
   };
 
-  const handleAmbientShare = (formattedText: string) => {
-    onSubmit({
-      body: JSON.stringify({ ops: [{ insert: formattedText + '\n' }] }),
-      image: null,
-    });
+  const handleSend = () => {
+    if (!quillRef.current) return;
+
+    const text = quillRef.current.getText();
+    const addedImage = imageElementRef.current?.files?.[0] || null;
+    const isCurrentEmpty = !addedImage && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
+
+    if (isCurrentEmpty) return;
+
+    const contents = quillRef.current.getContents();
+    const payload = {
+      ...contents,
+      ambient: detectedVideo ? ambientMode : undefined,
+    };
+    const body = JSON.stringify(payload);
+    onSubmit({ body, image: addedImage });
   };
 
   const isIOS = /iPad|iPhone|iPod|Mac/.test(navigator.userAgent);
@@ -159,17 +191,11 @@ const Editor = ({
     <div className="flex flex-col">
       <input type="file" accept="image/*" ref={imageElementRef} onChange={(e) => setImage(e.target.files![0])} className="hidden" />
 
-      <AmbientShareModal
-        open={ambientModalOpen}
-        onOpenChange={setAmbientModalOpen}
-        onShare={handleAmbientShare}
-        disabled={disabled}
-      />
-
       <div
         className={cn(
           'flex flex-col overflow-hidden rounded-md border border-border bg-background transition focus-within:border-ring focus-within:shadow-sm',
           disabled && 'opacity-50',
+          detectedVideo && ambientMode && 'border-pink-500/50 shadow-[0_0_15px_-3px_rgba(236,72,153,0.15)]',
         )}
       >
         <div ref={containerRef} className="h-full" />
@@ -221,16 +247,29 @@ const Editor = ({
             </Hint>
           )}
 
-          {variant === 'create' && (
-            <Hint label="Share Reel in Ambient Mode">
+          {/* Frictionless Ambient Mode Toggle: appears when video link is detected */}
+          {variant === 'create' && detectedVideo && (
+            <Hint
+              label={
+                ambientMode
+                  ? 'Ambient Mode ON: Shared to Reels tab (keeps chat clean)'
+                  : 'Ambient Mode OFF: Shared directly in Messages'
+              }
+            >
               <Button
-                disabled={disabled}
-                size="iconSm"
+                type="button"
+                size="sm"
                 variant="ghost"
-                onClick={() => setAmbientModalOpen(true)}
-                className="text-pink-500 hover:bg-pink-500/10 hover:text-pink-600"
+                onClick={() => setAmbientMode((prev) => !prev)}
+                className={cn(
+                  'h-7 gap-x-1.5 rounded-full px-2.5 text-xs font-medium transition-all select-none',
+                  ambientMode
+                    ? 'border border-pink-500/40 bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-purple-500/15 text-pink-600 shadow-xs hover:bg-pink-500/25 dark:text-pink-300'
+                    : 'border border-border bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
               >
-                <Sparkles className="size-4" />
+                <Sparkles className={cn('size-3.5', ambientMode ? 'animate-pulse text-pink-500' : 'text-muted-foreground')} />
+                <span>Ambient {ambientMode ? 'ON' : 'OFF'}</span>
               </Button>
             </Hint>
           )}
@@ -243,14 +282,7 @@ const Editor = ({
 
               <Button
                 disabled={disabled || isEmpty}
-                onClick={() => {
-                  if (!quillRef.current) return;
-
-                  onSubmit({
-                    body: JSON.stringify(quillRef.current.getContents()),
-                    image,
-                  });
-                }}
+                onClick={handleSend}
                 size="sm"
                 className="bg-[#007a5a] text-white hover:bg-[#007a5a]/80"
               >
@@ -261,19 +293,22 @@ const Editor = ({
 
           {variant === 'create' && (
             <Button
-              title="Send Message"
+              title={
+                detectedVideo
+                  ? ambientMode
+                    ? 'Send to Reels tab (keeps chat clean)'
+                    : 'Send in Messages'
+                  : 'Send Message'
+              }
               disabled={disabled || isEmpty}
-              onClick={() => {
-                if (!quillRef.current) return;
-
-                onSubmit({
-                  body: JSON.stringify(quillRef.current.getContents()),
-                  image,
-                });
-              }}
+              onClick={handleSend}
               className={cn(
-                'ml-auto',
-                isEmpty ? 'bg-background text-muted-foreground hover:bg-muted/80' : 'bg-[#007a5a] text-white hover:bg-[#007a5a]/80',
+                'ml-auto transition-all',
+                isEmpty
+                  ? 'bg-background text-muted-foreground hover:bg-muted/80'
+                  : detectedVideo && ambientMode
+                    ? 'bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 text-white shadow-md shadow-pink-500/25 hover:from-pink-500 hover:to-purple-500'
+                    : 'bg-[#007a5a] text-white hover:bg-[#007a5a]/80',
               )}
               size="iconSm"
             >

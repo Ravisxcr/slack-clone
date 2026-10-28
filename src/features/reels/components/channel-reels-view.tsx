@@ -1,12 +1,12 @@
 'use client';
 
-import { ExternalLink, Film, Heart, MessageCircle, Plus, Sparkles } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Film, Plus } from 'lucide-react';
+import { useMemo } from 'react';
+import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { AmbientVideoPlayer } from '@/components/ambient-video-player';
-import { AmbientShareModal } from '@/features/reels/components/ambient-share-modal';
 import { useReelsFeedModal } from '@/features/reels/store/use-reels-feed-modal';
 import { parseVideoUrl, type ParsedVideo } from '@/lib/video-parser';
 import type { Id } from '@/../convex/_generated/dataModel';
@@ -25,7 +25,6 @@ interface ChannelReelsViewProps {
     threadCount?: number;
   }>;
   onOpenThread?: (messageId: Id<'messages'>) => void;
-  onSendMessage?: (text: string) => void;
   isMemberDm?: boolean;
 }
 
@@ -37,17 +36,25 @@ interface ParsedReelItem {
   caption?: string;
   reactions: Array<{ value: string; count: number }>;
   threadCount: number;
+  isAmbient?: boolean;
 }
 
 export const ChannelReelsView = ({
   channelName,
   messages = [],
   onOpenThread,
-  onSendMessage,
   isMemberDm = false,
 }: ChannelReelsViewProps) => {
-  const [shareModalOpen, setShareModalOpen] = useState(false);
   const { openReelsFeed } = useReelsFeedModal();
+
+  const handleFocusInput = () => {
+    const editor = document.querySelector('.ql-editor') as HTMLElement;
+    if (editor) {
+      editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      editor.focus();
+      toast.info('Paste your video link below to share with Ambient Mode!');
+    }
+  };
 
   const reels: ParsedReelItem[] = useMemo(() => {
     if (!messages) return [];
@@ -57,10 +64,16 @@ export const ChannelReelsView = ({
     messages.forEach((msg) => {
       try {
         let plainText = msg.body;
+        let isReelAmbient = true;
         try {
           const delta = JSON.parse(msg.body);
-          if (delta.ops && Array.isArray(delta.ops)) {
-            plainText = delta.ops.map((op: { insert?: string }) => op.insert || '').join('');
+          if (delta && typeof delta === 'object') {
+            if ('ambient' in delta && delta.ambient === false) {
+              isReelAmbient = false;
+            }
+            if (delta.ops && Array.isArray(delta.ops)) {
+              plainText = delta.ops.map((op: { insert?: string }) => op.insert || '').join('');
+            }
           }
         } catch {
           // not JSON
@@ -79,6 +92,7 @@ export const ChannelReelsView = ({
               caption: caption || undefined,
               reactions: msg.reactions || [],
               threadCount: msg.threadCount || 0,
+              isAmbient: isReelAmbient,
             });
             break;
           }
@@ -91,64 +105,8 @@ export const ChannelReelsView = ({
     return items;
   }, [messages]);
 
-  const handleShare = (formattedText: string) => {
-    if (onSendMessage) {
-      onSendMessage(formattedText);
-    }
-  };
-
   return (
     <div className="flex flex-1 flex-col overflow-y-auto bg-background/50 p-4">
-      {onSendMessage && (
-        <AmbientShareModal
-          open={shareModalOpen}
-          onOpenChange={setShareModalOpen}
-          onShare={handleShare}
-        />
-      )}
-
-      {/* Top Banner */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-pink-500/20 bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-indigo-500/10 p-4 backdrop-blur-md">
-        <div className="flex items-center gap-x-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-pink-500/20 text-pink-500">
-            <Film className="size-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-foreground">
-              {isMemberDm ? `Reels with ${channelName}` : `Reels in #${channelName}`}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {reels.length} {reels.length === 1 ? 'reel' : 'reels'} shared with ambient lighting
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-x-2">
-          {reels.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openReelsFeed(reels[0]?.video.id)}
-              className="gap-x-1.5 border-pink-500/30 text-xs font-semibold text-pink-600 hover:bg-pink-500/10 dark:text-pink-400"
-            >
-              <Film className="size-3.5" />
-              <span>Full Feed</span>
-            </Button>
-          )}
-
-          {onSendMessage && (
-            <Button
-              size="sm"
-              onClick={() => setShareModalOpen(true)}
-              className="gap-x-1.5 bg-gradient-to-r from-pink-600 to-indigo-600 text-xs font-semibold text-white shadow-sm hover:from-pink-500 hover:to-indigo-500"
-            >
-              <Sparkles className="size-3.5" />
-              <span>Share Reel</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
       {/* Empty State */}
       {reels.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-y-3 py-16 text-center">
@@ -157,51 +115,65 @@ export const ChannelReelsView = ({
           </div>
           <h4 className="text-base font-semibold text-foreground">No Reels shared here yet</h4>
           <p className="max-w-xs text-xs text-muted-foreground">
-            Paste a YouTube Short, Instagram Reel, or TikTok in this channel, or click below to share with Ambient Mode.
+            Paste a YouTube Short, Instagram Reel, TikTok, or direct video link in the message box below to share with Ambient Mode.
           </p>
-          {onSendMessage && (
-            <Button
-              onClick={() => setShareModalOpen(true)}
-              size="sm"
-              className="mt-2 gap-x-1.5 bg-gradient-to-r from-pink-600 to-indigo-600 font-semibold text-white"
-            >
-              <Plus className="size-4" />
-              <span>Share first Reel</span>
-            </Button>
-          )}
+          <Button
+            onClick={handleFocusInput}
+            size="sm"
+            className="mt-2 gap-x-1.5 bg-gradient-to-r from-pink-600 to-indigo-600 font-semibold text-white"
+          >
+            <Plus className="size-4" />
+            <span>Share first Reel</span>
+          </Button>
         </div>
       ) : (
-        /* Reels Grid / Feed */
-        <div className="flex flex-wrap items-start justify-center gap-6 sm:justify-start">
-          {reels.map((reel) => (
-            <div key={reel.messageId} className="flex flex-col">
-              <div className="mb-2 flex items-center gap-x-2 px-1">
-                <Avatar className="size-6">
-                  <AvatarImage src={reel.authorImage} />
-                  <AvatarFallback className="text-[10px]">
-                    {reel.authorName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="truncate text-xs font-semibold text-foreground">
-                  {reel.authorName}
-                </span>
+        <div className="flex flex-col">
+          <div className="mb-4 flex items-center justify-between px-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              {reels.length} {reels.length === 1 ? 'reel' : 'reels'} shared
+            </span>
+            <Button
+              size="sm"
+              onClick={() => openReelsFeed(reels[0]?.video.id)}
+              className="gap-x-1.5 bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 text-xs font-semibold text-white shadow-md shadow-pink-500/20 hover:from-pink-500 hover:to-purple-500"
+            >
+              <Film className="size-3.5" />
+              <span>Watch Snap Feed</span>
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-start justify-center gap-6 sm:justify-start">
+            {reels.map((reel) => (
+              <div key={reel.messageId} className="flex flex-col">
+                <div className="mb-2 flex items-center gap-x-2 px-1">
+                  <Avatar className="size-6">
+                    <AvatarImage src={reel.authorImage} />
+                    <AvatarFallback className="text-[10px]">
+                      {reel.authorName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate text-xs font-semibold text-foreground">
+                    {reel.authorName}
+                  </span>
+                </div>
+
+                <AmbientVideoPlayer
+                  video={reel.video}
+                  defaultAmbient={reel.isAmbient}
+                  onOpenThread={onOpenThread ? () => onOpenThread(reel.messageId) : undefined}
+                  threadCount={reel.threadCount}
+                  reactions={reel.reactions}
+                  onOpenReelsFeed={() => openReelsFeed(reel.video.id)}
+                />
+
+                {reel.caption && (
+                  <p className="mt-1 max-w-[340px] px-1 text-xs text-muted-foreground">
+                    {reel.caption}
+                  </p>
+                )}
               </div>
-
-              <AmbientVideoPlayer
-                video={reel.video}
-                onOpenThread={onOpenThread ? () => onOpenThread(reel.messageId) : undefined}
-                threadCount={reel.threadCount}
-                reactions={reel.reactions}
-                onOpenReelsFeed={() => openReelsFeed(reel.video.id)}
-              />
-
-              {reel.caption && (
-                <p className="mt-1 max-w-[340px] px-1 text-xs text-muted-foreground">
-                  {reel.caption}
-                </p>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

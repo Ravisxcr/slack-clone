@@ -77,6 +77,7 @@ const Renderer = ({
 }: RendererProps) => {
   const [isEmpty, setIsEmpty] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isAmbient, setIsAmbient] = useState(true);
   const rendererRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,12 +92,22 @@ const Renderer = ({
     quill.enable(false);
 
     let parsedContent;
+    let ambientMode = true;
     try {
-      parsedContent = JSON.parse(value);
+      const data = JSON.parse(value);
+      if (data && typeof data === 'object') {
+        if ('ambient' in data && data.ambient === false) {
+          ambientMode = false;
+        }
+        parsedContent = data.ops ? { ops: data.ops } : data;
+      } else {
+        parsedContent = data;
+      }
     } catch {
       parsedContent = { ops: [{ insert: value }] };
     }
 
+    setIsAmbient(ambientMode);
     quill.setContents(parsedContent);
 
     const isEditorEmpty =
@@ -142,6 +153,7 @@ const Renderer = ({
       {parsedVideo ? (
         <AmbientVideoPlayer
           video={parsedVideo}
+          defaultAmbient={isAmbient}
           onOpenThread={onOpenThread}
           threadCount={threadCount}
           onToggleReaction={onToggleReaction}

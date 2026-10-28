@@ -120,3 +120,50 @@ export const parseVideoUrl = (rawUrl: string): ParsedVideo | null => {
   return null;
 };
 
+/**
+ * Determines whether a message was sent in Ambient Mode.
+ * Ambient messages are routed exclusively to the Reels tab so they
+ * do not clutter the main Messages conversation.
+ */
+export const isAmbientMessage = (body: string): boolean => {
+  if (!body) return false;
+  try {
+    let plainText = body;
+    let explicitAmbient: boolean | undefined = undefined;
+
+    try {
+      const data = JSON.parse(body);
+      if (data && typeof data === 'object') {
+        if ('ambient' in data) {
+          explicitAmbient = Boolean(data.ambient);
+        }
+        if (data.ops && Array.isArray(data.ops)) {
+          plainText = data.ops.map((op: { insert?: string }) => op.insert || '').join('');
+        }
+      }
+    } catch {
+      // not JSON
+    }
+
+    // If explicit ambient flag is set
+    if (explicitAmbient === false) {
+      return false; // explicitly turned off ambient mode -> normal message
+    }
+    if (explicitAmbient === true) {
+      return true; // explicitly sent in ambient mode -> ambient reel
+    }
+
+    // If no explicit ambient property (e.g. legacy message with reel/short link)
+    const urls = plainText.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
+    for (const url of urls) {
+      const parsed = parseVideoUrl(url);
+      if (parsed && (parsed.isVertical || parsed.platform === 'youtube_short' || parsed.platform === 'instagram_reel' || parsed.platform === 'tiktok')) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
