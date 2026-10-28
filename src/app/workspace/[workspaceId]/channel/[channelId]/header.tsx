@@ -1,7 +1,7 @@
 'use client';
 
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
-import { Trash } from 'lucide-react';
+import { Film, MessageSquare, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
@@ -25,12 +25,21 @@ import { useCurrentMember } from '@/features/members/api/use-current-member';
 import { useChannelId } from '@/hooks/use-channel-id';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   channelName: string;
+  activeTab?: 'messages' | 'reels';
+  onTabChange?: (tab: 'messages' | 'reels') => void;
+  reelsCount?: number;
 }
 
-export const Header = ({ channelName }: HeaderProps) => {
+export const Header = ({
+  channelName,
+  activeTab = 'messages',
+  onTabChange,
+  reelsCount,
+}: HeaderProps) => {
   const router = useRouter();
   const channelId = useChannelId();
   const workspaceId = useWorkspaceId();
@@ -96,91 +105,131 @@ export const Header = ({ channelName }: HeaderProps) => {
   };
 
   return (
-    <div className="flex h-[49px] items-center overflow-hidden border-b bg-background px-4">
+    <div className="flex h-[49px] items-center justify-between border-b bg-background px-4">
       <ConfirmDialog />
 
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button disabled={memberLoading} variant="ghost" className="w-auto overflow-hidden px-2 text-lg font-semibold" size="sm">
-            <span className="truncate"># {channelName}</span>
-            <FaChevronDown className="ml-2 size-2.5" />
-          </Button>
-        </DialogTrigger>
+      <div className="flex h-full items-center gap-x-2">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button disabled={memberLoading} variant="ghost" className="w-auto overflow-hidden px-2 text-lg font-semibold" size="sm">
+              <span className="truncate"># {channelName}</span>
+              <FaChevronDown className="ml-2 size-2.5" />
+            </Button>
+          </DialogTrigger>
 
-        <DialogContent className="overflow-hidden bg-muted/40 p-0">
-          <DialogHeader className="border-b bg-background p-4">
-            <DialogTitle># {channelName}</DialogTitle>
+          <DialogContent className="overflow-hidden bg-muted/40 p-0">
+            <DialogHeader className="border-b bg-background p-4">
+              <DialogTitle># {channelName}</DialogTitle>
 
-            <VisuallyHidden.Root>
-              <DialogDescription>Your channel preferences</DialogDescription>
-            </VisuallyHidden.Root>
-          </DialogHeader>
+              <VisuallyHidden.Root>
+                <DialogDescription>Your channel preferences</DialogDescription>
+              </VisuallyHidden.Root>
+            </DialogHeader>
 
-          <div className="flex flex-col gap-y-2 px-4 pb-4">
-            <Dialog open={editOpen || isUpdatingChannel} onOpenChange={handleEditOpen}>
-              <DialogTrigger asChild>
-                <button
-                  disabled={isUpdatingChannel}
-                  className="flex w-full cursor-pointer flex-col rounded-lg border bg-background px-5 py-4 hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
-                >
-                  <div className="flex w-full items-center justify-between">
-                    <p className="text-sm font-semibold">Channel name</p>
-                    {member?.role === 'admin' && (
-                      <p className="text-sm font-semibold text-[#1264A3] hover:underline dark:text-[#4d9de0]">Edit</p>
-                    )}
-                  </div>
-
-                  <p className="text-sm"># {channelName}</p>
-                </button>
-              </DialogTrigger>
-
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Rename this channel</DialogTitle>
-
-                  <VisuallyHidden.Root>
-                    <DialogDescription>Rename this channel to match your case.</DialogDescription>
-                  </VisuallyHidden.Root>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <Input
-                    value={value}
+            <div className="flex flex-col gap-y-2 px-4 pb-4">
+              <Dialog open={editOpen || isUpdatingChannel} onOpenChange={handleEditOpen}>
+                <DialogTrigger asChild>
+                  <button
                     disabled={isUpdatingChannel}
-                    onChange={handleChange}
-                    required
-                    autoFocus
-                    minLength={3}
-                    maxLength={20}
-                    placeholder="e.g. plan-budget"
-                  />
+                    className="flex w-full cursor-pointer flex-col rounded-lg border bg-background px-5 py-4 hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <p className="text-sm font-semibold">Channel name</p>
+                      {member?.role === 'admin' && (
+                        <p className="text-sm font-semibold text-[#1264A3] hover:underline dark:text-[#4d9de0]">Edit</p>
+                      )}
+                    </div>
 
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline" disabled={isUpdatingChannel}>
-                        Cancel
-                      </Button>
-                    </DialogClose>
+                    <p className="text-sm"># {channelName}</p>
+                  </button>
+                </DialogTrigger>
 
-                    <Button disabled={isUpdatingChannel}>Save</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Rename this channel</DialogTitle>
 
-            {member?.role === 'admin' && (
-              <button
-                onClick={handleDelete}
-                disabled={isRemovingChannel}
-                className="flex cursor-pointer items-center gap-x-2 rounded-lg border bg-background px-5 py-4 text-rose-600 hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
-              >
-                <Trash className="size-4" />
-                <p className="text-sm font-semibold">Delete channel</p>
-              </button>
-            )}
+                    <VisuallyHidden.Root>
+                      <DialogDescription>Rename this channel to match your case.</DialogDescription>
+                    </VisuallyHidden.Root>
+                  </DialogHeader>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <Input
+                      value={value}
+                      disabled={isUpdatingChannel}
+                      onChange={handleChange}
+                      required
+                      autoFocus
+                      minLength={3}
+                      maxLength={20}
+                      placeholder="e.g. plan-budget"
+                    />
+
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline" disabled={isUpdatingChannel}>
+                          Cancel
+                        </Button>
+                      </DialogClose>
+
+                      <Button disabled={isUpdatingChannel}>Save</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {member?.role === 'admin' && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isRemovingChannel}
+                  className="flex cursor-pointer items-center gap-x-2 rounded-lg border bg-background px-5 py-4 text-rose-600 hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <Trash className="size-4" />
+                  <p className="text-sm font-semibold">Delete channel</p>
+                </button>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Teams-style Tabs next to Channel Name */}
+        {onTabChange && (
+          <div className="ml-3 flex h-full items-center">
+            <button
+              type="button"
+              onClick={() => onTabChange('messages')}
+              className={cn(
+                'flex h-full items-center gap-x-1.5 border-b-2 px-3 text-sm font-medium transition-colors select-none',
+                activeTab === 'messages'
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <MessageSquare className="size-4" />
+              <span>Messages</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onTabChange('reels')}
+              className={cn(
+                'flex h-full items-center gap-x-1.5 border-b-2 px-3 text-sm font-medium transition-colors select-none',
+                activeTab === 'reels'
+                  ? 'border-pink-500 text-pink-600 font-semibold dark:text-pink-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Film className="size-4 text-pink-500" />
+              <span>Reels</span>
+              {reelsCount !== undefined && reelsCount > 0 && (
+                <span className="ml-0.5 rounded-full bg-pink-500/10 px-1.5 py-0.2 text-[10px] font-semibold text-pink-500">
+                  {reelsCount}
+                </span>
+              )}
+            </button>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
   );
 };
