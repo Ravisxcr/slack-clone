@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRemoveMessage } from '@/features/messages/api/use-remove-message';
 import { useUpdateMessage } from '@/features/messages/api/use-update-message';
 import { useToggleReaction } from '@/features/reactions/api/use-toggle-reaction';
+import { useReelsFeedModal } from '@/features/reels/store/use-reels-feed-modal';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePanel } from '@/hooks/use-panel';
 import { cn } from '@/lib/utils';
@@ -92,6 +93,7 @@ export const Message = ({
 }: MessageProps) => {
   const [ConfirmDialog, confirm] = useConfirm('Delete message', 'Are you sure you want to delete this message? This cannot be undone.');
   const { parentMessageId, onOpenMessage, onOpenProfile, onClose } = usePanel();
+  const { openReelsFeed } = useReelsFeedModal();
 
   const { mutate: updateMessage, isPending: isUpdatingMessage } = useUpdateMessage();
   const { mutate: removeMessage, isPending: isRemovingMessage } = useRemoveMessage();
@@ -187,7 +189,14 @@ export const Message = ({
               </div>
             ) : (
               <div className="flex w-full flex-col">
-                <Renderer value={body} />
+                <Renderer
+                  value={body}
+                  onOpenThread={() => onOpenMessage(id)}
+                  threadCount={threadCount}
+                  onToggleReaction={handleReaction}
+                  reactions={reactions}
+                  onOpenReelsFeed={(videoId) => openReelsFeed(videoId)}
+                />
                 <Thumbnail url={image} />
 
                 {updatedAt ? <span className="text-xs text-muted-foreground">(edited)</span> : null}
@@ -268,7 +277,14 @@ export const Message = ({
                 {showStatus && <DeliveryIcon className={cn('size-3.5', deliveryIconClass)} />}
               </div>
 
-              <Renderer value={body} />
+              <Renderer
+                value={body}
+                onOpenThread={() => onOpenMessage(id)}
+                threadCount={threadCount}
+                onToggleReaction={handleReaction}
+                reactions={reactions}
+                onOpenReelsFeed={(videoId) => openReelsFeed(videoId)}
+              />
               <Thumbnail url={image} />
 
               {updatedAt ? <span className="text-xs text-muted-foreground">(edited)</span> : null}

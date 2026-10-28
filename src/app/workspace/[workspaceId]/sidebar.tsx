@@ -1,11 +1,12 @@
 'use client';
 
-import { Bell, Home, MessagesSquare, MoreHorizontal } from 'lucide-react';
+import { Bell, Film, Home, MessagesSquare, MoreHorizontal } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { UserButton } from '@/features/auth/components/user-button';
 import { useGetActivityUnreadCount } from '@/features/activities/api/use-get-activity-unread-count';
 import { useGetDmUnreadCount } from '@/features/conversations/api/use-get-dm-unread-count';
+import { useReelsFeedModal } from '@/features/reels/store/use-reels-feed-modal';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
 
 import { SidebarButton } from './sidebar-button';
@@ -35,6 +36,7 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const pathname = usePathname();
   const workspaceId = useWorkspaceId();
+  const { openReelsFeed, isOpen: isReelsOpen } = useReelsFeedModal();
 
   const { data: activityUnreadCount } = useGetActivityUnreadCount({ workspaceId });
   const { data: dmUnreadCount } = useGetDmUnreadCount();
@@ -45,7 +47,7 @@ export const Sidebar = ({
         <SidebarButton
           icon={Home}
           label="Home"
-          isActive={!morePanelOpen && !activityPanelOpen && !dmsPanelOpen && pathname.includes('/workspace')}
+          isActive={!morePanelOpen && !activityPanelOpen && !dmsPanelOpen && !isReelsOpen && pathname.includes('/workspace')}
         />
       </div>
       <div onClick={onDmsToggle}>
@@ -62,6 +64,13 @@ export const Sidebar = ({
           label="Activity"
           isActive={activityPanelOpen}
           unreadCount={activityUnreadCount ?? 0}
+        />
+      </div>
+      <div onClick={() => openReelsFeed()}>
+        <SidebarButton
+          icon={Film}
+          label="Reels"
+          isActive={isReelsOpen}
         />
       </div>
       <div onClick={onMoreToggle}>

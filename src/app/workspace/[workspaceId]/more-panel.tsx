@@ -1,7 +1,6 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { ChevronLeft, Loader, Settings, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { ChevronLeft, Loader, Settings, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -16,7 +15,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useGetMemberEvents } from '@/features/members/api/use-get-member-events';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useRemoveMember } from '@/features/members/api/use-remove-member';
 import { useCurrentMember } from '@/features/members/api/use-current-member';
@@ -25,16 +23,6 @@ import { useWorkspaceId } from '@/hooks/use-workspace-id';
 import type { Id } from '@/../convex/_generated/dataModel';
 
 import { PreferencesModal } from './preferences-modal';
-
-interface MemberEvent {
-  _id: string;
-  _creationTime: number;
-  workspaceId: string;
-  actorName: string;
-  targetName: string;
-  targetImage?: string;
-  action: 'joined' | 'removed';
-}
 
 interface MorePanelProps {
   onClose: () => void;
@@ -48,7 +36,6 @@ export const MorePanel = ({ onClose }: MorePanelProps) => {
   const { data: workspace } = useGetWorkspace({ id: workspaceId });
   const { data: currentMember } = useCurrentMember({ workspaceId });
   const { data: members, isLoading: membersLoading } = useGetMembers({ workspaceId });
-  const { data: events, isLoading: eventsLoading } = useGetMemberEvents({ workspaceId });
   const { mutate: removeMember, isPending: isRemoving } = useRemoveMember();
 
   const isAdmin = currentMember?.role === 'admin';
@@ -104,24 +91,6 @@ export const MorePanel = ({ onClose }: MorePanelProps) => {
       </div>
 
       <div className="flex flex-col gap-y-6 overflow-y-auto px-4 py-2">
-        {/* Settings */}
-        <section className="flex flex-col gap-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Settings</p>
-
-          {isAdmin && (
-            <button
-              onClick={() => { onClose(); setPreferencesOpen(true); }}
-              className="flex w-full items-center gap-x-3 rounded-md px-2 py-2 text-sm text-white hover:bg-white/10"
-            >
-              <Settings className="size-4 shrink-0 text-white/60" />
-              <span>Workspace preferences</span>
-            </button>
-          )}
-
-          {!isAdmin && (
-            <p className="px-2 text-sm text-white/60">No settings available.</p>
-          )}
-        </section>
 
         {/* Members */}
         <section className="flex flex-col gap-y-2">
@@ -172,56 +141,6 @@ export const MorePanel = ({ onClose }: MorePanelProps) => {
                   </li>
                 );
               })}
-            </ul>
-          )}
-        </section>
-
-        {/* Member Activity */}
-        <section className="flex flex-col gap-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Member Activity</p>
-
-          {eventsLoading && (
-            <div className="flex items-center justify-center py-6">
-              <Loader className="size-4 animate-spin text-white/60" />
-            </div>
-          )}
-
-          {!eventsLoading && (!events || events.length === 0) && (
-            <p className="px-2 text-sm text-white/60">No member activity yet.</p>
-          )}
-
-          {!eventsLoading && events && events.length > 0 && (
-            <ul className="flex flex-col gap-y-1">
-              {(events as MemberEvent[]).map((event) => (
-                <li key={event._id} className="flex items-start gap-x-3 rounded-md px-2 py-2 hover:bg-white/10">
-                  <div className="relative mt-0.5 shrink-0">
-                    <Avatar className="size-7">
-                      <AvatarImage src={event.targetImage} />
-                      <AvatarFallback className="text-xs">
-                        {event.targetName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span
-                      className={`absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full ${event.action === 'joined' ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                    >
-                      {event.action === 'joined' ? (
-                        <UserPlus className="size-2 text-white" />
-                      ) : (
-                        <UserMinus className="size-2 text-white" />
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-medium text-white">{event.targetName}</span>
-                    <span className="text-xs text-white/60">
-                      {event.action === 'joined'
-                        ? `Joined ${formatDistanceToNow(event._creationTime, { addSuffix: true })}`
-                        : `Removed by ${event.actorName} ${formatDistanceToNow(event._creationTime, { addSuffix: true })}`}
-                    </span>
-                  </div>
-                </li>
-              ))}
             </ul>
           )}
         </section>

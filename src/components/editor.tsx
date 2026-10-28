@@ -1,6 +1,6 @@
 'use client';
 
-import { ImageIcon, Smile, XIcon } from 'lucide-react';
+import { ImageIcon, Smile, Sparkles, XIcon } from 'lucide-react';
 import Image from 'next/image';
 import Quill, { type QuillOptions } from 'quill';
 import type { Delta, Op } from 'quill/core';
@@ -10,6 +10,7 @@ import { MdSend } from 'react-icons/md';
 import { PiTextAa } from 'react-icons/pi';
 
 import { Button } from '@/components/ui/button';
+import { AmbientShareModal } from '@/features/reels/components/ambient-share-modal';
 import { cn } from '@/lib/utils';
 
 import { EmojiPopover } from './emoji-popover';
@@ -42,6 +43,7 @@ const Editor = ({
   const [text, setText] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const [ambientModalOpen, setAmbientModalOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageElementRef = useRef<HTMLInputElement>(null);
@@ -78,18 +80,14 @@ const Editor = ({
               key: 'Enter',
               handler: () => {
                 const text = quill.getText();
-
-                if (!imageElementRef.current || !submitRef.current) return;
-
-                const addedImage = imageElementRef.current.files?.[0] || null;
+                const addedImage = imageElementRef.current?.files?.[0] || null;
 
                 const isEmpty = !addedImage && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
 
                 if (isEmpty) return;
 
                 const body = JSON.stringify(quill.getContents());
-
-                submitRef.current({ body, image: addedImage });
+                submitRef.current?.({ body, image: addedImage });
               },
             },
             shift_enter: {
@@ -146,6 +144,13 @@ const Editor = ({
     quill.insertText(quill.getSelection()?.index || 0, emoji);
   };
 
+  const handleAmbientShare = (formattedText: string) => {
+    onSubmit({
+      body: JSON.stringify({ ops: [{ insert: formattedText + '\n' }] }),
+      image: null,
+    });
+  };
+
   const isIOS = /iPad|iPhone|iPod|Mac/.test(navigator.userAgent);
 
   const isEmpty = !image && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
@@ -153,6 +158,13 @@ const Editor = ({
   return (
     <div className="flex flex-col">
       <input type="file" accept="image/*" ref={imageElementRef} onChange={(e) => setImage(e.target.files![0])} className="hidden" />
+
+      <AmbientShareModal
+        open={ambientModalOpen}
+        onOpenChange={setAmbientModalOpen}
+        onShare={handleAmbientShare}
+        disabled={disabled}
+      />
 
       <div
         className={cn(
@@ -188,7 +200,7 @@ const Editor = ({
           </div>
         )}
 
-        <div className="z-[5] flex px-2 pb-2">
+        <div className="z-[5] flex items-center px-2 pb-2">
           <Hint label={isToolbarVisible ? 'Hide formatting' : 'Show formatting'}>
             <Button disabled={disabled} size="iconSm" variant="ghost" onClick={toggleToolbar}>
               <PiTextAa className="size-4" />
@@ -205,6 +217,20 @@ const Editor = ({
             <Hint label="Image">
               <Button disabled={disabled} size="iconSm" variant="ghost" onClick={() => imageElementRef.current?.click()}>
                 <ImageIcon className="size-4" />
+              </Button>
+            </Hint>
+          )}
+
+          {variant === 'create' && (
+            <Hint label="Share Reel in Ambient Mode">
+              <Button
+                disabled={disabled}
+                size="iconSm"
+                variant="ghost"
+                onClick={() => setAmbientModalOpen(true)}
+                className="text-pink-500 hover:bg-pink-500/10 hover:text-pink-600"
+              >
+                <Sparkles className="size-4" />
               </Button>
             </Hint>
           )}

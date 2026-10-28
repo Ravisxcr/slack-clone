@@ -1,20 +1,36 @@
 'use client';
 
 import { Loader, TriangleAlert } from 'lucide-react';
+import { useEffect } from 'react';
 
 import { MessageList } from '@/components/message-list';
 import { useGetChannel } from '@/features/channels/api/use-get-channel';
 import { useGetMessages } from '@/features/messages/api/use-get-messages';
+import { useChatTabs } from '@/features/tabs/store/use-chat-tabs';
 import { useChannelId } from '@/hooks/use-channel-id';
+import { useWorkspaceId } from '@/hooks/use-workspace-id';
 
 import { ChatInput } from './chat-input';
 import { Header } from './header';
 
 const ChannelIdPage = () => {
   const channelId = useChannelId();
+  const workspaceId = useWorkspaceId();
+  const { addOrFocusTab } = useChatTabs();
 
   const { results, status, loadMore } = useGetMessages({ channelId });
   const { data: channel, isLoading: channelLoading } = useGetChannel({ id: channelId });
+
+  useEffect(() => {
+    if (channel) {
+      addOrFocusTab({
+        id: channel._id,
+        type: 'channel',
+        name: channel.name,
+        path: `/workspace/${workspaceId}/channel/${channel._id}`,
+      });
+    }
+  }, [channel?._id, channel?.name, workspaceId, addOrFocusTab]);
 
   if (channelLoading || status == 'LoadingFirstPage') {
     return (

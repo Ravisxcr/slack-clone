@@ -10,6 +10,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Profile } from '@/features/members/components/profile';
 import { Thread } from '@/features/messages/components/thread';
+import { ReelsFeedModal } from '@/features/reels/components/reels-feed-modal';
+import { ChatTabsBar } from '@/features/tabs/components/chat-tabs-bar';
 import { useDesktopNotifications } from '@/hooks/use-desktop-notifications';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { usePanel } from '@/hooks/use-panel';
@@ -26,7 +28,7 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
   const workspaceId = useWorkspaceId();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const { parentMessageId, profileMemberId, onClose } = usePanel();
+  const { parentMessageId, profileMemberId, onClose, onOpenMessage } = usePanel();
 
   useDesktopNotifications(workspaceId);
   const [morePanelOpen, setMorePanelOpen] = useState(false);
@@ -66,10 +68,10 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
 
   const sidebarPanelContent = activityPanelOpen ? (
     <ActivityPanel onClose={() => setActivityPanelOpen(false)} />
-  ) : morePanelOpen ? (
-    <MorePanel onClose={() => setMorePanelOpen(false)} />
   ) : dmsPanelOpen ? (
     <DmsPanel onClose={() => setDmsPanelOpen(false)} />
+  ) : morePanelOpen ? (
+    <MorePanel onClose={() => setMorePanelOpen(false)} />
   ) : (
     <WorkspaceSidebar />
   );
@@ -86,7 +88,10 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
 
   return (
     <div className="h-full">
-      <Toolbar onMenuClick={() => setMobileSidebarOpen(true)} />
+      <Toolbar />
+
+      {/* Global Reels & Shorts Feed Modal */}
+      <ReelsFeedModal onOpenThread={onOpenMessage} />
 
       <div className="flex h-[calc(100vh_-_40px)]">
         <Sidebar
@@ -103,7 +108,10 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
             a time (they hold live Convex subscriptions and a Quill editor instance) - so the
             mobile/desktop layouts are switched in JS rather than just hidden with CSS. */}
         {isMobile ? (
-          <div className="min-w-0 flex-1">{children}</div>
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <ChatTabsBar />
+            <div className="flex-1 overflow-hidden">{children}</div>
+          </div>
         ) : (
           <ResizablePanelGroup id="workspace-panel-group" direction="horizontal" autoSaveId="slack-clone-workspace-layout">
             <ResizablePanel id="workspace-panel-sidebar" defaultSize={20} minSize={11} className="bg-[var(--workspace-sidebar)]">
@@ -113,7 +121,10 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
             <ResizableHandle withHandle />
 
             <ResizablePanel id="workspace-panel-main" defaultSize={80} minSize={20}>
-              {children}
+              <div className="flex h-full flex-col overflow-hidden">
+                <ChatTabsBar />
+                <div className="flex-1 overflow-hidden">{children}</div>
+              </div>
             </ResizablePanel>
 
             {showPanel && (

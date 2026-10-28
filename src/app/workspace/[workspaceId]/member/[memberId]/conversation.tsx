@@ -7,6 +7,7 @@ import { useGetConversationLastRead } from '@/features/conversations/api/use-get
 import { useGetMember } from '@/features/members/api/use-get-member';
 import { useGetMessages } from '@/features/messages/api/use-get-messages';
 import { useMarkConversationRead } from '@/features/messages/api/use-mark-conversation-read';
+import { useChatTabs } from '@/features/tabs/store/use-chat-tabs';
 import { useMemberId } from '@/hooks/use-member-id';
 import { usePanel } from '@/hooks/use-panel';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
@@ -21,6 +22,7 @@ interface ConversationProps {
 export const Conversation = ({ id }: ConversationProps) => {
   const memberId = useMemberId();
   const workspaceId = useWorkspaceId();
+  const { addOrFocusTab } = useChatTabs();
 
   const { onOpenProfile } = usePanel();
 
@@ -36,6 +38,18 @@ export const Conversation = ({ id }: ConversationProps) => {
   useEffect(() => {
     markRead({ conversationId: id, workspaceId });
   }, [id, workspaceId, markRead]);
+
+  useEffect(() => {
+    if (member?.user) {
+      addOrFocusTab({
+        id: memberId,
+        type: 'member',
+        name: member.user.name || 'Member',
+        image: member.user.image,
+        path: `/workspace/${workspaceId}/member/${memberId}`,
+      });
+    }
+  }, [member?._id, member?.user?.name, member?.user?.image, memberId, workspaceId, addOrFocusTab]);
 
   if (memberLoading || status === 'LoadingFirstPage') {
     return (
