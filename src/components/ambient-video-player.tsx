@@ -1,10 +1,12 @@
 'use client';
 
 import { ExternalLink, Film, Heart, MessageCircle, Sparkles, Volume2, VolumeX } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Hint } from '@/components/hint';
+import { useReelsFeedModal } from '@/features/reels/store/use-reels-feed-modal';
 import { type ParsedVideo } from '@/lib/video-parser';
+import { notifyVideoPlay, pauseIframeElement, VIDEO_PLAY_EVENT, type VideoPlayEventDetail } from '@/lib/video-playback';
 import { cn } from '@/lib/utils';
 
 interface AmbientVideoPlayerProps {
@@ -32,6 +34,62 @@ export const AmbientVideoPlayer = ({
   const [liked, setLiked] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
+  // Stable unique player ID to coordinate playback with all other players
+  const playerIdRef = useRef<string>(`player_${video.platform}_${video.id}_${Math.random().toString(36).slice(2, 9)}`);
+  const playerId = playerIdRef.current;
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // If the fullscreen Reels Feed Modal opens, immediately pause any background message video
+  const { isOpen: isReelsModalOpen } = useReelsFeedModal();
+  useEffect(() => {
+    if (isReelsModalOpen) {
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+      }
+      if (iframeRef.current) {
+        pauseIframeElement(iframeRef.current);
+      }
+    }
+  }, [isReelsModalOpen]);
+
+  // When another video begins playing elsewhere, pause this video immediately
+  useEffect(() => {
+    const handleOtherPlay = (e: Event) => {
+      const detail = (e as CustomEvent<VideoPlayEventDetail>).detail;
+      if (detail && detail.playerId !== playerId) {
+        if (videoRef.current && !videoRef.current.paused) {
+          videoRef.current.pause();
+        }
+        if (iframeRef.current) {
+          pauseIframeElement(iframeRef.current);
+        }
+      }
+    };
+
+    window.addEventListener(VIDEO_PLAY_EVENT, handleOtherPlay);
+    return () => {
+      window.removeEventListener(VIDEO_PLAY_EVENT, handleOtherPlay);
+    };
+  }, [playerId]);
+
+  // Detect when user interacts with or plays the iframe
+  useEffect(() => {
+    const handleBlur = () => {
+      setTimeout(() => {
+        if (document.activeElement === iframeRef.current) {
+          notifyVideoPlay(playerId);
+        }
+      }, 50);
+    };
+
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [playerId]);
+
   // Check if user reacted with heart
   const heartReaction = reactions.find((r) => r.value === '❤️' || r.value === 'heart');
   const heartCount = (heartReaction?.count ?? 0) + (liked && !heartReaction ? 1 : 0);
@@ -56,6 +114,7 @@ export const AmbientVideoPlayer = ({
             video.platform === 'youtube_video' && 'bg-gradient-to-tr from-red-600/40 via-orange-500/30 to-amber-500/20',
             video.platform === 'instagram_reel' && 'bg-gradient-to-tr from-purple-600/50 via-pink-600/40 to-amber-500/40',
             video.platform === 'tiktok' && 'bg-gradient-to-tr from-cyan-400/50 via-pink-500/40 to-slate-900/30',
+            video.platform === 'x_video' && 'bg-gradient-to-tr from-sky-400/50 via-blue-600/40 to-indigo-950/30',
             video.platform === 'direct_video' && 'bg-gradient-to-tr from-violet-600/50 via-purple-500/40 to-indigo-500/30',
           )}
         />
@@ -78,6 +137,7 @@ export const AmbientVideoPlayer = ({
                 video.platform === 'youtube_video' && 'bg-red-500',
                 video.platform === 'instagram_reel' && 'bg-pink-500',
                 video.platform === 'tiktok' && 'bg-cyan-400',
+                video.platform === 'x_video' && 'bg-sky-400',
                 video.platform === 'direct_video' && 'bg-purple-500',
               )}
             />
@@ -118,11 +178,14 @@ export const AmbientVideoPlayer = ({
           {video.platform === 'direct_video' ? (
             <div className="relative size-full">
               <video
+                ref={videoRef}
+                data-player-id={playerId}
                 src={video.embedUrl}
                 controls
                 loop
                 muted={isMuted}
                 playsInline
+                onPlay={() => notifyVideoPlay(playerId)}
                 className="size-full object-contain"
               />
               <button
@@ -135,6 +198,8 @@ export const AmbientVideoPlayer = ({
             </div>
           ) : (
             <iframe
+              ref={iframeRef}
+              data-player-id={playerId}
               src={video.embedUrl}
               title={video.platformName}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -145,13 +210,13 @@ export const AmbientVideoPlayer = ({
           )}
 
           {/* Quick Floating Action Overlay (Right Side - Like TikTok/Instagram) */}
-          <div className="absolute bottom-4 right-2.5 z-20 flex flex-col items-center gap-y-3">
+          <div className="pointer-events-none absolute bottom-4 right-2.5 z-20 flex flex-col items-center gap-y-3">
             {/* Heart / Like Button */}
             <Hint label="Like video" side="left">
               <button
                 type="button"
                 onClick={handleHeartClick}
-                className="group flex flex-col items-center gap-y-0.5"
+                className="pointer-events-auto group flex flex-col items-center gap-y-0.5"
               >
                 <div
                   className={cn(
@@ -175,7 +240,7 @@ export const AmbientVideoPlayer = ({
                 <button
                   type="button"
                   onClick={onOpenThread}
-                  className="group flex flex-col items-center gap-y-0.5"
+                  className="pointer-events-auto group flex flex-col items-center gap-y-0.5"
                 >
                   <div className="flex size-9 items-center justify-center rounded-full bg-black/50 text-white/80 backdrop-blur-md transition group-hover:scale-110 group-hover:text-white active:scale-95">
                     <MessageCircle className="size-5" />
@@ -195,7 +260,7 @@ export const AmbientVideoPlayer = ({
                 <button
                   type="button"
                   onClick={() => onOpenReelsFeed(video.id)}
-                  className="flex size-9 items-center justify-center rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 text-white shadow-lg backdrop-blur-md transition hover:scale-110 active:scale-95"
+                  className="pointer-events-auto flex size-9 items-center justify-center rounded-full bg-gradient-to-tr from-pink-500 to-indigo-500 text-white shadow-lg backdrop-blur-md transition hover:scale-110 active:scale-95"
                 >
                   <Film className="size-4" />
                 </button>

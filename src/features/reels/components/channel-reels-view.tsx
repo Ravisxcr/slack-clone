@@ -115,7 +115,7 @@ export const ChannelReelsView = ({
           </div>
           <h4 className="text-base font-semibold text-foreground">No Reels shared here yet</h4>
           <p className="max-w-xs text-xs text-muted-foreground">
-            Paste a YouTube Short, Instagram Reel, TikTok, or direct video link in the message box below to share with Ambient Mode.
+            Paste a YouTube Short, Instagram Reel, TikTok, X (Twitter) video, or direct video link in the message box below to share with Ambient Mode.
           </p>
           <Button
             onClick={handleFocusInput}

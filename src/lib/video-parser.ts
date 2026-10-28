@@ -3,6 +3,7 @@ export type VideoPlatform =
   | 'youtube_video'
   | 'instagram_reel'
   | 'tiktok'
+  | 'x_video'
   | 'direct_video';
 
 export interface ParsedVideo {
@@ -29,6 +30,9 @@ const INSTAGRAM_REEL_REGEX =
 const TIKTOK_REGEX =
   /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/(?:@[a-zA-Z0-9_.-]+\/video\/|v\/|t\/)?([0-9a-zA-Z_-]+)/i;
 
+const X_TWITTER_VIDEO_REGEX =
+  /(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/(?:[a-zA-Z0-9_]+|i)\/status\/([0-9]+)(?:\/(?:video|photo)\/\d+)?(?:[^\s]*)/i;
+
 const DIRECT_VIDEO_REGEX =
   /^https?:\/\/.+\.(mp4|webm|mov|m4v|ogg)(?:\?.*)?$/i;
 
@@ -44,7 +48,7 @@ export const parseVideoUrl = (rawUrl: string): ParsedVideo | null => {
       platform: 'youtube_short',
       id,
       originalUrl: url,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=0&loop=1&playlist=${id}&rel=0&modestbranding=1`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=0&enablejsapi=1&loop=1&playlist=${id}&rel=0&modestbranding=1`,
       thumbnailUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
       isVertical: true,
       platformName: 'YouTube Shorts',
@@ -61,7 +65,7 @@ export const parseVideoUrl = (rawUrl: string): ParsedVideo | null => {
       platform: 'youtube_video',
       id,
       originalUrl: url,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&rel=0&modestbranding=1`,
       thumbnailUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
       isVertical: false,
       platformName: 'YouTube',
@@ -102,7 +106,23 @@ export const parseVideoUrl = (rawUrl: string): ParsedVideo | null => {
     };
   }
 
-  // 5. Direct MP4 / WebM / Video
+  // 5. X (Twitter) Video
+  const xMatch = url.match(X_TWITTER_VIDEO_REGEX);
+  if (xMatch && xMatch[1]) {
+    const id = xMatch[1];
+    return {
+      platform: 'x_video',
+      id,
+      originalUrl: url,
+      embedUrl: `https://platform.twitter.com/embed/Tweet.html?dnt=true&hideThread=true&id=${id}&theme=dark`,
+      isVertical: true,
+      platformName: 'X (Twitter)',
+      platformColor: '#1D9BF0',
+      accentGradient: 'from-sky-400 via-blue-600 to-indigo-950',
+    };
+  }
+
+  // 6. Direct MP4 / WebM / Video
   const directMatch = url.match(DIRECT_VIDEO_REGEX);
   if (directMatch) {
     return {
@@ -157,7 +177,14 @@ export const isAmbientMessage = (body: string): boolean => {
     const urls = plainText.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
     for (const url of urls) {
       const parsed = parseVideoUrl(url);
-      if (parsed && (parsed.isVertical || parsed.platform === 'youtube_short' || parsed.platform === 'instagram_reel' || parsed.platform === 'tiktok')) {
+      if (
+        parsed &&
+        (parsed.isVertical ||
+          parsed.platform === 'youtube_short' ||
+          parsed.platform === 'instagram_reel' ||
+          parsed.platform === 'tiktok' ||
+          parsed.platform === 'x_video')
+      ) {
         return true;
       }
     }
