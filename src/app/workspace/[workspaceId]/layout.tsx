@@ -42,6 +42,10 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
   // Track exact visible viewport height on mobile, dynamically contracting when virtual keyboard opens
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!isMobile) {
+      setViewportHeight(null);
+      return;
+    }
     const vv = window.visualViewport;
     if (!vv) return;
 
@@ -57,7 +61,7 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
       vv.removeEventListener('resize', updateHeight);
       vv.removeEventListener('scroll', updateHeight);
     };
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     setMobileSidebarOpen(false);
@@ -124,11 +128,15 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
 
   return (
     <div
-      className="flex flex-col overflow-hidden bg-background"
-      style={{
-        height: viewportHeight ? `${viewportHeight}px` : '100dvh',
-        maxHeight: viewportHeight ? `${viewportHeight}px` : '100dvh',
-      }}
+      className="flex h-screen h-[100dvh] flex-col overflow-hidden bg-background"
+      style={
+        isMobile && viewportHeight
+          ? {
+              height: `${viewportHeight}px`,
+              maxHeight: `${viewportHeight}px`,
+            }
+          : undefined
+      }
     >
       <Toolbar onMenuClick={() => setMobileSidebarOpen(true)} />
 

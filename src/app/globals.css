@@ -87,11 +87,14 @@
 
 .ql-toolbar {
   border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
   background-color: #f8f8f8 !important;
+  padding: 6px 8px !important;
 }
 
 .dark .ql-toolbar {
   background-color: hsl(var(--muted)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
 .ql-toolbar .ql-formats:not(:last-child) {

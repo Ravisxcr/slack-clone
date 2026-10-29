@@ -100,7 +100,7 @@ export const ChatInput = ({ placeholder }: ChatInputProps) => {
   };
 
   return (
-    <div className="w-full shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 md:px-5 md:pb-4">
+    <div className="w-full shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 md:px-4 md:pb-2.5">
       <Editor placeholder={placeholder} key={editorKey} onSubmit={handleSubmit} disabled={isPending} innerRef={innerRef} />
     </div>
   );
