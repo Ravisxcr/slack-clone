@@ -139,7 +139,25 @@ const Editor = ({
       setText(quill.getText());
     });
 
+    // Start with formatting toolbar hidden on mobile by default to keep input compact
+    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+    const toolbarElement = containerRef.current?.querySelector('.ql-toolbar');
+    if (toolbarElement && isMobileDevice) {
+      toolbarElement.classList.add('hidden');
+      setIsToolbarVisible(false);
+    }
+
+    // Scroll into view on mobile focus when keyboard opens
+    const handleFocus = () => {
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 150);
+    };
+
+    quill.root.addEventListener('focus', handleFocus);
+
     return () => {
+      quill.root.removeEventListener('focus', handleFocus);
       if (container) container.innerHTML = '';
 
       quill.off(Quill.events.TEXT_CHANGE);
@@ -150,11 +168,18 @@ const Editor = ({
   }, [innerRef]);
 
   const toggleToolbar = () => {
-    setIsToolbarVisible((current) => !current);
-
-    const toolbarElement = containerRef.current?.querySelector('.ql-toolbar');
-
-    if (toolbarElement) toolbarElement.classList.toggle('hidden');
+    setIsToolbarVisible((current) => {
+      const next = !current;
+      const toolbarElement = containerRef.current?.querySelector('.ql-toolbar');
+      if (toolbarElement) {
+        if (next) {
+          toolbarElement.classList.remove('hidden');
+        } else {
+          toolbarElement.classList.add('hidden');
+        }
+      }
+      return next;
+    });
   };
 
   const onEmojiSelect = (emoji: string) => {
