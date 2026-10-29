@@ -1,10 +1,18 @@
 import Quill from 'quill';
 import { useEffect, useRef, useState } from 'react';
 
+import { parseVideoUrl } from '@/lib/video-parser';
+
+import { AmbientVideoPlayer } from './ambient-video-player';
 import { LinkPreview } from './link-preview';
 
 interface RendererProps {
   value: string;
+  onOpenThread?: () => void;
+  threadCount?: number;
+  onToggleReaction?: (value: string) => void;
+  reactions?: Array<{ value: string; count: number }>;
+  onOpenReelsFeed?: (initialVideoId?: string) => void;
 }
 
 const URL_TEST_PATTERN = /https?:\/\/\S+/;
@@ -59,9 +67,17 @@ const linkifyPlainTextUrls = (root: HTMLElement) => {
   });
 };
 
-const Renderer = ({ value }: RendererProps) => {
+const Renderer = ({
+  value,
+  onOpenThread,
+  threadCount = 0,
+  onToggleReaction,
+  reactions = [],
+  onOpenReelsFeed,
+}: RendererProps) => {
   const [isEmpty, setIsEmpty] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isAmbient, setIsAmbient] = useState(true);
   const rendererRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,16 +91,32 @@ const Renderer = ({ value }: RendererProps) => {
 
     quill.enable(false);
 
-    const contents = JSON.parse(value);
-    quill.setContents(contents);
+    let parsedContent;
+    let ambientMode = true;
+    try {
+      const data = JSON.parse(value);
+      if (data && typeof data === 'object') {
+        if ('ambient' in data && data.ambient === false) {
+          ambientMode = false;
+        }
+        parsedContent = data.ops ? { ops: data.ops } : data;
+      } else {
+        parsedContent = data;
+      }
+    } catch {
+      parsedContent = { ops: [{ insert: value }] };
+    }
 
-    const isEmpty =
+    setIsAmbient(ambientMode);
+    quill.setContents(parsedContent);
+
+    const isEditorEmpty =
       quill
         .getText()
         .replace(/<(.|\n)*?>/g, '')
         .trim().length === 0;
 
-    setIsEmpty(isEmpty);
+    setIsEmpty(isEditorEmpty);
 
     container.innerHTML = quill.root.innerHTML;
 
@@ -98,7 +130,9 @@ const Renderer = ({ value }: RendererProps) => {
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
 
-      if (!firstLink && (a.href.startsWith('http://') || a.href.startsWith('https://'))) firstLink = a.href;
+      if (!firstLink && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {
+        firstLink = a.href;
+      }
     });
 
     setPreviewUrl(firstLink);
@@ -110,11 +144,25 @@ const Renderer = ({ value }: RendererProps) => {
 
   if (isEmpty) return null;
 
+  const parsedVideo = previewUrl ? parseVideoUrl(previewUrl) : null;
+
   return (
     <div className="ql-snow">
       <div ref={rendererRef} className="ql-editor ql-renderer" />
 
-      {previewUrl && <LinkPreview url={previewUrl} />}
+      {parsedVideo ? (
+        <AmbientVideoPlayer
+          video={parsedVideo}
+          defaultAmbient={isAmbient}
+          onOpenThread={onOpenThread}
+          threadCount={threadCount}
+          onToggleReaction={onToggleReaction}
+          reactions={reactions}
+          onOpenReelsFeed={onOpenReelsFeed}
+        />
+      ) : (
+        previewUrl && <LinkPreview url={previewUrl} />
+      )}
     </div>
   );
 };

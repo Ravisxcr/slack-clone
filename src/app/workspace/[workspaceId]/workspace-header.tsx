@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ListFilter, SquarePen } from 'lucide-react';
+import { ChevronDown, ListFilter, SquarePen, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
 
 import { InviteModal } from './invite-modal';
@@ -27,6 +28,7 @@ interface WorkspaceHeaderProps {
 export const WorkspaceHeader = ({ workspace, isAdmin }: WorkspaceHeaderProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
+  const [, setMobileSidebarOpen] = useMobileSidebar();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -35,15 +37,15 @@ export const WorkspaceHeader = ({ workspace, isAdmin }: WorkspaceHeaderProps) =>
       <PreferencesModal open={preferencesOpen} setOpen={setPreferencesOpen} initialValue={workspace.name} />
       <InviteModal open={inviteOpen} setOpen={setInviteOpen} name={workspace.name} joinCode={workspace.joinCode} />
 
-      <div className="flex h-[49px] items-center justify-between gap-0.5 px-4">
+      <div className="flex h-[49px] items-center justify-between gap-0.5 px-3 sm:px-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="transparent"
-              className="w-auto overflow-hidden p-1.5 text-lg font-semibold text-[var(--workspace-sidebar-fg)]"
+              className="w-auto overflow-hidden p-1.5 text-base sm:text-lg font-semibold text-[var(--workspace-sidebar-fg)]"
               size="sm"
             >
-              <span className="truncate">{workspace.name}</span>
+              <span className="truncate max-w-[130px] sm:max-w-[170px]">{workspace.name}</span>
               <ChevronDown className="ml-1 size-4 shrink-0" />
             </Button>
           </DropdownMenuTrigger>
@@ -90,11 +92,25 @@ export const WorkspaceHeader = ({ workspace, isAdmin }: WorkspaceHeaderProps) =>
               variant="transparent"
               size="iconSm"
               className="text-[var(--workspace-sidebar-fg)]"
-              onClick={() => router.push(`/workspace/${workspaceId}/new-message`)}
+              onClick={() => {
+                setMobileSidebarOpen(false);
+                router.push(`/workspace/${workspaceId}/new-message`);
+              }}
             >
               <SquarePen className="size-4" />
             </Button>
           </Hint>
+
+          <Button
+            variant="transparent"
+            size="iconSm"
+            className="text-[var(--workspace-sidebar-fg)] hover:bg-white/10 md:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Close sidebar"
+            title="Close sidebar"
+          >
+            <X className="size-4" />
+          </Button>
         </div>
       </div>
     </>

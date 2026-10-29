@@ -1,12 +1,15 @@
 'use client';
 
-import { Bell, Home, MessagesSquare, MoreHorizontal } from 'lucide-react';
+import { Bell, Film, Home, MessagesSquare, MoreHorizontal } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 import { UserButton } from '@/features/auth/components/user-button';
 import { useGetActivityUnreadCount } from '@/features/activities/api/use-get-activity-unread-count';
 import { useGetDmUnreadCount } from '@/features/conversations/api/use-get-dm-unread-count';
+import { useReelsFeedModal } from '@/features/reels/store/use-reels-feed-modal';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
+import { cn } from '@/lib/utils';
 
 import { SidebarButton } from './sidebar-button';
 import { WorkspaceSwitcher } from './workspace-switcher';
@@ -19,8 +22,9 @@ interface SidebarProps {
   dmsPanelOpen: boolean;
   onDmsToggle: () => void;
   onHomeClick: () => void;
-  /** Renders as a horizontal top bar instead of a vertical rail, for use inside the mobile drawer. */
-  mobileHorizontal?: boolean;
+  /** When true, renders as the left vertical sidepane inside the mobile drawer */
+  isMobileDrawer?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar = ({
@@ -31,21 +35,32 @@ export const Sidebar = ({
   dmsPanelOpen,
   onDmsToggle,
   onHomeClick,
-  mobileHorizontal,
+  isMobileDrawer = false,
+  onCloseMobile,
 }: SidebarProps) => {
   const pathname = usePathname();
   const workspaceId = useWorkspaceId();
+  const { openReelsFeed, isOpen: isReelsOpen } = useReelsFeedModal();
+  const [, setMobileSidebarOpen] = useMobileSidebar();
 
   const { data: activityUnreadCount } = useGetActivityUnreadCount({ workspaceId });
   const { data: dmUnreadCount } = useGetDmUnreadCount();
 
+  const handleCloseMobile = () => {
+    if (onCloseMobile) {
+      onCloseMobile();
+    } else {
+      setMobileSidebarOpen(false);
+    }
+  };
+
   const navButtons = (
-    <>
+    <div className="flex flex-col items-center gap-y-3.5">
       <div onClick={onHomeClick}>
         <SidebarButton
           icon={Home}
           label="Home"
-          isActive={!morePanelOpen && !activityPanelOpen && !dmsPanelOpen && pathname.includes('/workspace')}
+          isActive={!morePanelOpen && !activityPanelOpen && !dmsPanelOpen && !isReelsOpen && pathname.includes('/workspace')}
         />
       </div>
       <div onClick={onDmsToggle}>
@@ -64,26 +79,33 @@ export const Sidebar = ({
           unreadCount={activityUnreadCount ?? 0}
         />
       </div>
+      <div
+        onClick={() => {
+          openReelsFeed();
+          if (isMobileDrawer) handleCloseMobile();
+        }}
+      >
+        <SidebarButton
+          icon={Film}
+          label="Reels"
+          isActive={isReelsOpen}
+        />
+      </div>
       <div onClick={onMoreToggle}>
         <SidebarButton icon={MoreHorizontal} label="More" isActive={morePanelOpen} />
       </div>
-    </>
+    </div>
   );
 
-  if (mobileHorizontal) {
-    return (
-      <div className="flex items-center gap-x-2 border-b bg-[var(--sidebar)] px-3 py-2">
-        <WorkspaceSwitcher />
-
-        <div className="flex flex-1 items-center justify-around gap-x-1">{navButtons}</div>
-
-        <UserButton />
-      </div>
-    );
-  }
-
   return (
-    <aside className="hidden h-full w-[70px] flex-col items-center gap-y-4 bg-[var(--sidebar)] pb-[4px] pt-[9px] md:flex">
+    <aside
+      className={cn(
+        'h-full flex-col items-center border-r border-black/20 bg-[var(--sidebar)]',
+        isMobileDrawer
+          ? 'flex w-[68px] shrink-0 gap-y-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]'
+          : 'hidden w-[70px] shrink-0 gap-y-4 pb-[4px] pt-[9px] md:flex',
+      )}
+    >
       <WorkspaceSwitcher />
 
       {navButtons}

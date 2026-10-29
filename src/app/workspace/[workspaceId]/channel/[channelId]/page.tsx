@@ -1,20 +1,41 @@
 'use client';
 
 import { Loader, TriangleAlert } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 import { MessageList } from '@/components/message-list';
 import { useGetChannel } from '@/features/channels/api/use-get-channel';
 import { useGetMessages } from '@/features/messages/api/use-get-messages';
+import { ChannelReelsView } from '@/features/reels/components/channel-reels-view';
 import { useChannelId } from '@/hooks/use-channel-id';
+import { usePanel } from '@/hooks/use-panel';
+import { isAmbientMessage } from '@/lib/video-parser';
 
 import { ChatInput } from './chat-input';
 import { Header } from './header';
 
 const ChannelIdPage = () => {
   const channelId = useChannelId();
+  const { onOpenMessage } = usePanel();
+
+  const [activeTab, setActiveTab] = useState<'messages' | 'reels'>('messages');
 
   const { results, status, loadMore } = useGetMessages({ channelId });
   const { data: channel, isLoading: channelLoading } = useGetChannel({ id: channelId });
+
+  // Regular conversation messages: ambient reels are excluded to prevent cluttering
+  const chatMessages = useMemo(() => {
+    if (!results) return [];
+    return results.filter((msg) => !isAmbientMessage(msg.body));
+  }, [results]);
+
+  // Ambient reels for this channel
+  const reelMessages = useMemo(() => {
+    if (!results) return [];
+    return results.filter((msg) => isAmbientMessage(msg.body));
+  }, [results]);
+
+  const reelsCount = reelMessages.length;
 
   if (channelLoading || status == 'LoadingFirstPage') {
     return (
@@ -35,18 +56,39 @@ const ChannelIdPage = () => {
 
   return (
     <div className="flex h-full flex-col">
-      <Header channelName={channel.name} />
-
-      <MessageList
+      <Header
         channelName={channel.name}
-        channelCreationTime={channel._creationTime}
-        data={results}
-        loadMore={loadMore}
-        isLoadingMore={status === 'LoadingMore'}
-        canLoadMore={status === 'CanLoadMore'}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        reelsCount={reelsCount}
       />
 
-      <ChatInput placeholder={`Message # ${channel.name}`} />
+      {activeTab === 'messages' && (
+        <>
+          <MessageList
+            channelName={channel.name}
+            channelCreationTime={channel._creationTime}
+            data={chatMessages}
+            loadMore={loadMore}
+            isLoadingMore={status === 'LoadingMore'}
+            canLoadMore={status === 'CanLoadMore'}
+          />
+
+          <ChatInput placeholder={`Message # ${channel.name}`} />
+        </>
+      )}
+
+      {activeTab === 'reels' && (
+        <>
+          <ChannelReelsView
+            channelName={channel.name}
+            messages={reelMessages}
+            onOpenThread={onOpenMessage}
+          />
+
+          <ChatInput placeholder={`Share a reel or short in #${channel.name} (paste link with optional comment)...`} />
+        </>
+      )}
     </div>
   );
 };

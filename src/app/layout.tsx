@@ -21,6 +21,9 @@ export const metadata: Metadata = siteConfig;
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
 };
 
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {

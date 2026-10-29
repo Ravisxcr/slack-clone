@@ -10,6 +10,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Profile } from '@/features/members/components/profile';
 import { Thread } from '@/features/messages/components/thread';
+import { ReelsFeedModal } from '@/features/reels/components/reels-feed-modal';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 import { useDesktopNotifications } from '@/hooks/use-desktop-notifications';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { usePanel } from '@/hooks/use-panel';
@@ -26,19 +28,19 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
   const workspaceId = useWorkspaceId();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const { parentMessageId, profileMemberId, onClose } = usePanel();
+  const { parentMessageId, profileMemberId, onClose, onOpenMessage } = usePanel();
 
   useDesktopNotifications(workspaceId);
   const [morePanelOpen, setMorePanelOpen] = useState(false);
   const [activityPanelOpen, setActivityPanelOpen] = useState(false);
   const [dmsPanelOpen, setDmsPanelOpen] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useMobileSidebar();
 
   const showPanel = !!parentMessageId || !!profileMemberId;
 
   useEffect(() => {
     setMobileSidebarOpen(false);
-  }, [pathname]);
+  }, [pathname, setMobileSidebarOpen]);
 
   const handleHomeClick = () => {
     setMorePanelOpen(false);
@@ -65,11 +67,26 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
   };
 
   const sidebarPanelContent = activityPanelOpen ? (
-    <ActivityPanel onClose={() => setActivityPanelOpen(false)} />
-  ) : morePanelOpen ? (
-    <MorePanel onClose={() => setMorePanelOpen(false)} />
+    <ActivityPanel
+      onClose={() => {
+        setActivityPanelOpen(false);
+        setMobileSidebarOpen(false);
+      }}
+    />
   ) : dmsPanelOpen ? (
-    <DmsPanel onClose={() => setDmsPanelOpen(false)} />
+    <DmsPanel
+      onClose={() => {
+        setDmsPanelOpen(false);
+        setMobileSidebarOpen(false);
+      }}
+    />
+  ) : morePanelOpen ? (
+    <MorePanel
+      onClose={() => {
+        setMorePanelOpen(false);
+        setMobileSidebarOpen(false);
+      }}
+    />
   ) : (
     <WorkspaceSidebar />
   );
@@ -85,10 +102,13 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
   );
 
   return (
-    <div className="h-full">
+    <div className="flex h-screen h-[100dvh] flex-col overflow-hidden bg-background">
       <Toolbar onMenuClick={() => setMobileSidebarOpen(true)} />
 
-      <div className="flex h-[calc(100vh_-_40px)]">
+      {/* Global Reels & Shorts Feed Modal */}
+      <ReelsFeedModal onOpenThread={onOpenMessage} />
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar
           morePanelOpen={morePanelOpen}
           onMoreToggle={handleMoreToggle}
@@ -103,7 +123,7 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
             a time (they hold live Convex subscriptions and a Quill editor instance) - so the
             mobile/desktop layouts are switched in JS rather than just hidden with CSS. */}
         {isMobile ? (
-          <div className="min-w-0 flex-1">{children}</div>
+          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
         ) : (
           <ResizablePanelGroup id="workspace-panel-group" direction="horizontal" autoSaveId="slack-clone-workspace-layout">
             <ResizablePanel id="workspace-panel-sidebar" defaultSize={20} minSize={11} className="bg-[var(--workspace-sidebar)]">
@@ -132,7 +152,12 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
         <>
           {/* Mobile channel/DM list drawer */}
           <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-            <SheetContent side="left" className="w-[85vw] max-w-sm gap-0 p-0" hideClose>
+            <SheetContent
+              side="left"
+              className="flex h-screen h-[100dvh] w-[90vw] max-w-[360px] flex-row gap-0 border-r border-white/10 bg-[var(--workspace-sidebar)] p-0 shadow-2xl"
+              hideClose
+            >
+              {/* Left Sidepane within the mobile sidebar */}
               <Sidebar
                 morePanelOpen={morePanelOpen}
                 onMoreToggle={handleMoreToggle}
@@ -141,15 +166,18 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
                 dmsPanelOpen={dmsPanelOpen}
                 onDmsToggle={handleDmsToggle}
                 onHomeClick={handleHomeClick}
-                mobileHorizontal
+                isMobileDrawer
+                onCloseMobile={() => setMobileSidebarOpen(false)}
               />
 
-              {/* Clicking a channel/DM link should always close the drawer, even when it's a
-                  link to the already-active route (pathname wouldn't change in that case). */}
+              {/* Right Content Area within the mobile sidebar */}
               <div
-                className="min-h-0 flex-1 overflow-y-auto bg-[var(--workspace-sidebar)]"
+                className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-[var(--workspace-sidebar)] pb-[env(safe-area-inset-bottom)]"
                 onClickCapture={(e) => {
-                  if ((e.target as HTMLElement).closest('a')) setMobileSidebarOpen(false);
+                  const target = e.target as HTMLElement;
+                  if (target.closest('a')) {
+                    setMobileSidebarOpen(false);
+                  }
                 }}
               >
                 {sidebarPanelContent}
@@ -159,7 +187,7 @@ const WorkspaceIdLayout = ({ children }: Readonly<PropsWithChildren>) => {
 
           {/* Mobile thread/profile overlay - Thread/Profile already render their own close button */}
           <Sheet open={showPanel} onOpenChange={(open) => !open && onClose()}>
-            <SheetContent side="right" className="w-full max-w-full gap-0 p-0" hideClose>
+            <SheetContent side="right" className="flex h-screen h-[100dvh] w-full max-w-full flex-col gap-0 p-0 pb-[env(safe-area-inset-bottom)]" hideClose>
               {activePanelContent}
             </SheetContent>
           </Sheet>

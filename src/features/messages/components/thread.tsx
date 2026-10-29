@@ -174,7 +174,7 @@ export const Thread = ({ messageId, onClose }: ThreadProps) => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-[49px] items-center justify-between border-b px-4">
+      <div className="flex h-[49px] shrink-0 items-center justify-between border-b px-4">
         <p className="text-lg font-bold">Thread</p>
 
         <Button onClick={onClose} size="iconSm" variant="ghost">
@@ -272,7 +272,7 @@ export const Thread = ({ messageId, onClose }: ThreadProps) => {
         />
       </div>
 
-      <div className="px-4">
+      <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 md:px-4 md:pb-4">
         <Editor key={editorKey} onSubmit={handleSubmit} innerRef={innerRef} disabled={isPending} placeholder="Reply..." />
       </div>
     </div>

@@ -81,6 +81,15 @@ export const ChatInput = ({ placeholder, conversationId }: ChatInputProps) => {
       await createMessage(values, { throwError: true });
 
       setEditorKey((prevKey) => prevKey + 1);
+
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed && parsed.ambient === true) {
+          toast.success('Reel shared to Reels tab (kept out of chat to avoid clutter)!');
+        }
+      } catch {
+        // ignore
+      }
     } catch (error) {
       toast.error('Failed to send message.');
     } finally {
@@ -90,7 +99,7 @@ export const ChatInput = ({ placeholder, conversationId }: ChatInputProps) => {
   };
 
   return (
-    <div className="w-full px-5">
+    <div className="w-full shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 md:px-5 md:pb-4">
       <Editor placeholder={placeholder} key={editorKey} onSubmit={handleSubmit} disabled={isPending} innerRef={innerRef} />
     </div>
   );

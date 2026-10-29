@@ -9,7 +9,6 @@ import { FaGithub } from 'react-icons/fa';
 import type { Id } from '@/../convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -22,6 +21,7 @@ import { links } from '@/config';
 import { useGetChannels } from '@/features/channels/api/use-get-channels';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useGetWorkspace } from '@/features/workspaces/api/use-get-workspace';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
 
 interface ToolbarProps {
@@ -31,12 +31,21 @@ interface ToolbarProps {
 export const Toolbar = ({ onMenuClick }: ToolbarProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
+  const [, setMobileSidebarOpen] = useMobileSidebar();
 
   const { data } = useGetWorkspace({ id: workspaceId });
   const { data: channels } = useGetChannels({ workspaceId });
   const { data: members } = useGetMembers({ workspaceId });
 
   const [open, setOpen] = useState(false);
+
+  const handleMenuClick = () => {
+    if (onMenuClick) {
+      onMenuClick();
+    } else {
+      setMobileSidebarOpen((prev) => !prev);
+    }
+  };
 
   const onChannelClick = (channelId: Id<'channels'>) => {
     setOpen(false);
@@ -62,9 +71,9 @@ export const Toolbar = ({ onMenuClick }: ToolbarProps) => {
   }, []);
 
   return (
-    <nav className="flex h-10 items-center justify-between gap-x-1 bg-[var(--toolbar)] p-1.5">
+    <nav className="flex h-10 shrink-0 items-center justify-between gap-x-1 bg-[var(--toolbar)] p-1.5">
       <Button
-        onClick={onMenuClick}
+        onClick={handleMenuClick}
         size="iconSm"
         variant="transparent"
         className="shrink-0 hover:bg-white/20 md:hidden"

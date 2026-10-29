@@ -1,13 +1,11 @@
 import { useAuthActions } from '@convex-dev/auth/react';
 import { TriangleAlert } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { FaGithub } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
 import type { SignInFlow } from '../types';
@@ -18,9 +16,6 @@ interface SignInCardProps {
 
 export const SignInCard = ({ setState }: SignInCardProps) => {
   const { signIn } = useAuthActions();
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
 
@@ -29,24 +24,11 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
     signIn(value).finally(() => setPending(false));
   };
 
-  const handleSignIn = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setPending(true);
-    setError('');
-
-    signIn('password', { email, password, flow: 'signIn' })
-      .then(() => router.push('/'))
-      .catch(() => {
-        setError('Invalid email or password!');
-      })
-      .finally(() => setPending(false));
-  };
-
   return (
     <Card className="size-full p-8">
       <CardHeader className="px-0 pt-0">
         <CardTitle>Login to continue</CardTitle>
-        <CardDescription>Use your email or another service to continue.</CardDescription>
+        <CardDescription>Choose a provider to sign in.</CardDescription>
       </CardHeader>
 
       {!!error && (
@@ -57,22 +39,6 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
       )}
 
       <CardContent className="space-y-5 px-0 pb-0">
-        <form onSubmit={handleSignIn} className="space-y-2.5">
-          <Input disabled={pending} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" required />
-
-          <Input
-            disabled={pending}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            type="password"
-            required
-          />
-
-          <Button type="submit" className="w-full" size="lg" disabled={pending}>
-            Continue
-          </Button>
-        </form>
 
         <Separator />
 

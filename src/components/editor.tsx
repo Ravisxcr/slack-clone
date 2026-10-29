@@ -1,15 +1,16 @@
 'use client';
 
-import { ImageIcon, Smile, XIcon } from 'lucide-react';
+import { ImageIcon, Smile, Sparkles, XIcon } from 'lucide-react';
 import Image from 'next/image';
 import Quill, { type QuillOptions } from 'quill';
 import type { Delta, Op } from 'quill/core';
 import 'quill/dist/quill.snow.css';
-import { type MutableRefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type MutableRefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MdSend } from 'react-icons/md';
 import { PiTextAa } from 'react-icons/pi';
 
 import { Button } from '@/components/ui/button';
+import { parseVideoUrl, type ParsedVideo } from '@/lib/video-parser';
 import { cn } from '@/lib/utils';
 
 import { EmojiPopover } from './emoji-popover';
@@ -42,6 +43,18 @@ const Editor = ({
   const [text, setText] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const [ambientMode, setAmbientMode] = useState(true);
+
+  // Detect video link (YouTube Shorts, YouTube, Instagram Reels, TikTok, Direct Video, X Video)
+  const detectedVideo: ParsedVideo | null = useMemo(() => {
+    if (!text) return null;
+    const urls = text.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
+    for (const url of urls) {
+      const parsed = parseVideoUrl(url);
+      if (parsed) return parsed;
+    }
+    return null;
+  }, [text]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageElementRef = useRef<HTMLInputElement>(null);
@@ -51,12 +64,14 @@ const Editor = ({
   const placeholderRef = useRef(placeholder);
   const defaultValueRef = useRef(defaultValue);
   const disabledRef = useRef(disabled);
+  const ambientModeRef = useRef(ambientMode);
 
   useLayoutEffect(() => {
     submitRef.current = onSubmit;
     placeholderRef.current = placeholder;
     defaultValueRef.current = defaultValue;
     disabledRef.current = disabled;
+    ambientModeRef.current = ambientMode;
   });
 
   useEffect(() => {
@@ -78,18 +93,22 @@ const Editor = ({
               key: 'Enter',
               handler: () => {
                 const text = quill.getText();
-
-                if (!imageElementRef.current || !submitRef.current) return;
-
-                const addedImage = imageElementRef.current.files?.[0] || null;
+                const addedImage = imageElementRef.current?.files?.[0] || null;
 
                 const isEmpty = !addedImage && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
 
                 if (isEmpty) return;
 
-                const body = JSON.stringify(quill.getContents());
+                const urls = text.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
+                const hasVideo = urls.some((u) => parseVideoUrl(u));
 
-                submitRef.current({ body, image: addedImage });
+                const contents = quill.getContents();
+                const payload = {
+                  ...contents,
+                  ambient: hasVideo ? ambientModeRef.current : undefined,
+                };
+                const body = JSON.stringify(payload);
+                submitRef.current?.({ body, image: addedImage });
               },
             },
             shift_enter: {
@@ -146,7 +165,25 @@ const Editor = ({
     quill.insertText(quill.getSelection()?.index || 0, emoji);
   };
 
-  const isIOS = /iPad|iPhone|iPod|Mac/.test(navigator.userAgent);
+  const handleSend = () => {
+    if (!quillRef.current) return;
+
+    const text = quillRef.current.getText();
+    const addedImage = imageElementRef.current?.files?.[0] || null;
+    const isCurrentEmpty = !addedImage && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
+
+    if (isCurrentEmpty) return;
+
+    const contents = quillRef.current.getContents();
+    const payload = {
+      ...contents,
+      ambient: detectedVideo ? ambientMode : undefined,
+    };
+    const body = JSON.stringify(payload);
+    onSubmit({ body, image: addedImage });
+  };
+
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod|Mac/.test(navigator.userAgent);
 
   const isEmpty = !image && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
 
@@ -158,6 +195,7 @@ const Editor = ({
         className={cn(
           'flex flex-col overflow-hidden rounded-md border border-border bg-background transition focus-within:border-ring focus-within:shadow-sm',
           disabled && 'opacity-50',
+          detectedVideo && ambientMode && 'border-pink-500/50 shadow-[0_0_15px_-3px_rgba(236,72,153,0.15)]',
         )}
       >
         <div ref={containerRef} className="h-full" />
@@ -188,7 +226,7 @@ const Editor = ({
           </div>
         )}
 
-        <div className="z-[5] flex px-2 pb-2">
+        <div className="z-[5] flex flex-wrap items-center gap-1 px-2 pb-2">
           <Hint label={isToolbarVisible ? 'Hide formatting' : 'Show formatting'}>
             <Button disabled={disabled} size="iconSm" variant="ghost" onClick={toggleToolbar}>
               <PiTextAa className="size-4" />
@@ -209,6 +247,33 @@ const Editor = ({
             </Hint>
           )}
 
+          {/* Frictionless Ambient Mode Toggle: appears when video link is detected */}
+          {variant === 'create' && detectedVideo && (
+            <Hint
+              label={
+                ambientMode
+                  ? 'Ambient Mode ON: Shared to Reels tab (keeps chat clean)'
+                  : 'Ambient Mode OFF: Shared directly in Messages'
+              }
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setAmbientMode((prev) => !prev)}
+                className={cn(
+                  'h-7 gap-x-1.5 rounded-full px-2.5 text-xs font-medium transition-all select-none',
+                  ambientMode
+                    ? 'border border-pink-500/40 bg-gradient-to-r from-pink-500/15 via-rose-500/15 to-purple-500/15 text-pink-600 shadow-xs hover:bg-pink-500/25 dark:text-pink-300'
+                    : 'border border-border bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <Sparkles className={cn('size-3.5', ambientMode ? 'animate-pulse text-pink-500' : 'text-muted-foreground')} />
+                <span>Ambient {ambientMode ? 'ON' : 'OFF'}</span>
+              </Button>
+            </Hint>
+          )}
+
           {variant === 'update' && (
             <div className="ml-auto flex items-center gap-x-2">
               <Button variant="outline" size="sm" onClick={onCancel} disabled={disabled}>
@@ -217,14 +282,7 @@ const Editor = ({
 
               <Button
                 disabled={disabled || isEmpty}
-                onClick={() => {
-                  if (!quillRef.current) return;
-
-                  onSubmit({
-                    body: JSON.stringify(quillRef.current.getContents()),
-                    image,
-                  });
-                }}
+                onClick={handleSend}
                 size="sm"
                 className="bg-[#007a5a] text-white hover:bg-[#007a5a]/80"
               >
@@ -235,19 +293,22 @@ const Editor = ({
 
           {variant === 'create' && (
             <Button
-              title="Send Message"
+              title={
+                detectedVideo
+                  ? ambientMode
+                    ? 'Send to Reels tab (keeps chat clean)'
+                    : 'Send in Messages'
+                  : 'Send Message'
+              }
               disabled={disabled || isEmpty}
-              onClick={() => {
-                if (!quillRef.current) return;
-
-                onSubmit({
-                  body: JSON.stringify(quillRef.current.getContents()),
-                  image,
-                });
-              }}
+              onClick={handleSend}
               className={cn(
-                'ml-auto',
-                isEmpty ? 'bg-background text-muted-foreground hover:bg-muted/80' : 'bg-[#007a5a] text-white hover:bg-[#007a5a]/80',
+                'ml-auto transition-all',
+                isEmpty
+                  ? 'bg-background text-muted-foreground hover:bg-muted/80'
+                  : detectedVideo && ambientMode
+                    ? 'bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 text-white shadow-md shadow-pink-500/25 hover:from-pink-500 hover:to-purple-500'
+                    : 'bg-[#007a5a] text-white hover:bg-[#007a5a]/80',
               )}
               size="iconSm"
             >
@@ -258,7 +319,7 @@ const Editor = ({
       </div>
 
       {variant === 'create' && (
-        <div className={cn('flex justify-end p-2 text-[10px] text-muted-foreground opacity-0 transition', !isEmpty && 'opacity-100')}>
+        <div className={cn('hidden md:flex justify-end p-2 text-[10px] text-muted-foreground opacity-0 transition', !isEmpty && 'opacity-100')}>
           <p>
             <strong>Shift + {isIOS ? 'Return' : 'Enter'}</strong> to add a new line.
           </p>
