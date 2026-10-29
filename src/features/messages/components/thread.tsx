@@ -272,7 +272,7 @@ export const Thread = ({ messageId, onClose }: ThreadProps) => {
         />
       </div>
 
-      <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 md:px-4 md:pb-4">
+      <div className="shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 md:px-4 md:pb-2.5">
         <Editor key={editorKey} onSubmit={handleSubmit} innerRef={innerRef} disabled={isPending} placeholder="Reply..." />
       </div>
     </div>

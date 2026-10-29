@@ -181,7 +181,7 @@ export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
               : 'text-white/60 hover:text-white',
           )}
         >
-          Activity
+          Chats
           {unreadCount > 0 && (
             <span className="ml-1.5 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-normal text-white">
               {unreadCount}
@@ -198,7 +198,7 @@ export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
               : 'text-white/60 hover:text-white',
           )}
         >
-          Member Activity
+          Members
         </button>
       </div>
 

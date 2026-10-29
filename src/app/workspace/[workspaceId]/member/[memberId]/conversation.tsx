@@ -64,7 +64,7 @@ export const Conversation = ({ id }: ConversationProps) => {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <Header
         memberName={member?.user.name}
         memberImage={member?.user.image}

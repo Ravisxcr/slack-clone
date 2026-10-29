@@ -42,7 +42,7 @@ const Editor = ({
 }: EditorProps) => {
   const [text, setText] = useState('');
   const [image, setImage] = useState<File | null>(null);
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const [isToolbarVisible, setIsToolbarVisible] = useState(false);
   const [ambientMode, setAmbientMode] = useState(true);
 
   // Detect video link (YouTube Shorts, YouTube, Instagram Reels, TikTok, Direct Video, X Video)
@@ -139,7 +139,23 @@ const Editor = ({
       setText(quill.getText());
     });
 
+    // Start with formatting toolbar hidden by default to keep input compact on all devices
+    const toolbarElement = containerRef.current?.querySelector('.ql-toolbar');
+    if (toolbarElement) {
+      toolbarElement.classList.add('hidden');
+    }
+
+    // Scroll into view on mobile focus when keyboard opens
+    const handleFocus = () => {
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 150);
+    };
+
+    quill.root.addEventListener('focus', handleFocus);
+
     return () => {
+      quill.root.removeEventListener('focus', handleFocus);
       if (container) container.innerHTML = '';
 
       quill.off(Quill.events.TEXT_CHANGE);
@@ -150,11 +166,18 @@ const Editor = ({
   }, [innerRef]);
 
   const toggleToolbar = () => {
-    setIsToolbarVisible((current) => !current);
-
-    const toolbarElement = containerRef.current?.querySelector('.ql-toolbar');
-
-    if (toolbarElement) toolbarElement.classList.toggle('hidden');
+    setIsToolbarVisible((current) => {
+      const next = !current;
+      const toolbarElement = containerRef.current?.querySelector('.ql-toolbar');
+      if (toolbarElement) {
+        if (next) {
+          toolbarElement.classList.remove('hidden');
+        } else {
+          toolbarElement.classList.add('hidden');
+        }
+      }
+      return next;
+    });
   };
 
   const onEmojiSelect = (emoji: string) => {
@@ -228,7 +251,13 @@ const Editor = ({
 
         <div className="z-[5] flex flex-wrap items-center gap-1 px-2 pb-2">
           <Hint label={isToolbarVisible ? 'Hide formatting' : 'Show formatting'}>
-            <Button disabled={disabled} size="iconSm" variant="ghost" onClick={toggleToolbar}>
+            <Button
+              disabled={disabled}
+              size="iconSm"
+              variant="ghost"
+              onClick={toggleToolbar}
+              className={cn(isToolbarVisible && 'bg-muted text-foreground')}
+            >
               <PiTextAa className="size-4" />
             </Button>
           </Hint>
@@ -318,8 +347,8 @@ const Editor = ({
         </div>
       </div>
 
-      {variant === 'create' && (
-        <div className={cn('hidden md:flex justify-end p-2 text-[10px] text-muted-foreground opacity-0 transition', !isEmpty && 'opacity-100')}>
+      {variant === 'create' && !isEmpty && (
+        <div className="hidden md:flex justify-end pt-1 pr-1 text-[10px] text-muted-foreground transition">
           <p>
             <strong>Shift + {isIOS ? 'Return' : 'Enter'}</strong> to add a new line.
           </p>
