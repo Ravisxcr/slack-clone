@@ -162,7 +162,7 @@ const ReelFeedItem = ({
     <div
       data-index={idx}
       ref={setRef}
-      className="relative flex h-[86vh] min-h-[86vh] max-h-[800px] w-full shrink-0 snap-start snap-always items-center justify-center p-2"
+      className="relative flex h-[82dvh] min-h-[82dvh] max-h-[800px] w-full shrink-0 snap-start snap-always items-center justify-center p-2"
     >
       <div className="relative size-full overflow-hidden rounded-3xl border border-white/15 bg-black shadow-2xl">
         {/* Video Player: ONLY mounted when isActive is true! When inactive, no iframe/video exists -> 0% background sound */}
@@ -575,7 +575,7 @@ export const ReelsFeedModal = ({ onOpenThread }: ReelsFeedModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-2xl animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-2xl animate-in fade-in duration-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Dynamic Background Ambient Aura */}
       {ambientGlow && currentReel && (
         <div
@@ -592,7 +592,7 @@ export const ReelsFeedModal = ({ onOpenThread }: ReelsFeedModalProps) => {
       )}
 
       {/* Top Header Bar */}
-      <div className="absolute top-4 left-6 right-6 z-50 flex items-center justify-between text-white">
+      <div className="absolute top-[max(1rem,env(safe-area-inset-top))] left-4 right-4 sm:left-6 sm:right-6 z-50 flex items-center justify-between text-white">
         <div className="flex items-center gap-x-2.5">
           <Film className="size-5 text-pink-500 animate-pulse" />
           <h1 className="text-base font-bold tracking-tight">Reels & Shorts Feed</h1>
@@ -658,7 +658,7 @@ export const ReelsFeedModal = ({ onOpenThread }: ReelsFeedModalProps) => {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="relative flex h-[86vh] max-h-[800px] w-full max-w-[400px] flex-col overflow-y-scroll snap-y snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="relative flex h-[82dvh] max-h-[800px] w-full max-w-[400px] flex-col overflow-y-scroll snap-y snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             {reels.map((reel, idx) => {
               const isActive = activeIndex === idx;

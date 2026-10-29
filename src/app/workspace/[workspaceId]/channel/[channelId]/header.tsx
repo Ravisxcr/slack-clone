@@ -43,6 +43,7 @@ export const Header = ({
   const router = useRouter();
   const channelId = useChannelId();
   const workspaceId = useWorkspaceId();
+
   const [ConfirmDialog, confirm] = useConfirm(
     'Delete this channel?',
     'You are about to delete this channel and any of its associated messages. This action is irreversible.',
@@ -105,15 +106,15 @@ export const Header = ({
   };
 
   return (
-    <div className="flex h-[49px] items-center justify-between border-b bg-background px-4">
+    <div className="flex h-[49px] shrink-0 items-center justify-between border-b bg-background px-3 sm:px-4">
       <ConfirmDialog />
 
-      <div className="flex h-full items-center gap-x-2">
+      <div className="flex h-full min-w-0 items-center gap-x-1 sm:gap-x-2">
         <Dialog>
           <DialogTrigger asChild>
-            <Button disabled={memberLoading} variant="ghost" className="w-auto overflow-hidden px-2 text-lg font-semibold" size="sm">
+            <Button disabled={memberLoading} variant="ghost" className="w-auto overflow-hidden px-1.5 sm:px-2 text-base sm:text-lg font-semibold" size="sm">
               <span className="truncate"># {channelName}</span>
-              <FaChevronDown className="ml-2 size-2.5" />
+              <FaChevronDown className="ml-1 sm:ml-2 size-2.5 shrink-0" />
             </Button>
           </DialogTrigger>
 
@@ -161,7 +162,7 @@ export const Header = ({
                       required
                       autoFocus
                       minLength={3}
-                      maxLength={20}
+                      maxLength={80}
                       placeholder="e.g. plan-budget"
                     />
 
@@ -194,18 +195,18 @@ export const Header = ({
 
         {/* Teams-style Tabs next to Channel Name */}
         {onTabChange && (
-          <div className="ml-3 flex h-full items-center">
+          <div className="ml-1 sm:ml-3 flex h-full items-center">
             <button
               type="button"
               onClick={() => onTabChange('messages')}
               className={cn(
-                'flex h-full items-center gap-x-1.5 border-b-2 px-3 text-sm font-medium transition-colors select-none',
+                'flex h-full items-center gap-x-1 sm:gap-x-1.5 border-b-2 px-2 sm:px-3 text-xs sm:text-sm font-medium transition-colors select-none',
                 activeTab === 'messages'
                   ? 'border-primary text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              <MessageSquare className="size-4" />
+              <MessageSquare className="size-3.5 sm:size-4" />
               <span>Messages</span>
             </button>
 
@@ -213,13 +214,13 @@ export const Header = ({
               type="button"
               onClick={() => onTabChange('reels')}
               className={cn(
-                'flex h-full items-center gap-x-1.5 border-b-2 px-3 text-sm font-medium transition-colors select-none',
+                'flex h-full items-center gap-x-1 sm:gap-x-1.5 border-b-2 px-2 sm:px-3 text-xs sm:text-sm font-medium transition-colors select-none',
                 activeTab === 'reels'
                   ? 'border-pink-500 text-pink-600 font-semibold dark:text-pink-400'
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              <Film className="size-4 text-pink-500" />
+              <Film className="size-3.5 sm:size-4 text-pink-500" />
               <span>Reels</span>
               {reelsCount !== undefined && reelsCount > 0 && (
                 <span className="ml-0.5 rounded-full bg-pink-500/10 px-1.5 py-0.2 text-[10px] font-semibold text-pink-500">

@@ -1,12 +1,14 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { Check, CheckCheck, ChevronLeft, Loader, MessagesSquare } from 'lucide-react';
+import { Check, CheckCheck, ChevronLeft, Loader, MessagesSquare, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { AvailabilityDot } from '@/components/availability-dot';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { useGetAllDms } from '@/features/conversations/api/use-get-all-dms';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 
 const extractPlainText = (body: string): string => {
   try {
@@ -28,24 +30,39 @@ interface DmsPanelProps {
 
 export const DmsPanel = ({ onClose }: DmsPanelProps) => {
   const router = useRouter();
+  const [, setMobileSidebarOpen] = useMobileSidebar();
   const { data: dms, isLoading } = useGetAllDms();
 
   const handleDmClick = (workspaceId: string, otherMemberId: string) => {
     onClose();
+    setMobileSidebarOpen(false);
     router.push(`/workspace/${workspaceId}/member/${otherMemberId}`);
   };
 
   return (
     <div className="flex h-full flex-col bg-[var(--workspace-sidebar)]">
-      <div className="flex items-center gap-x-2 px-4 py-3">
-        <button
-          onClick={onClose}
-          className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-white"
-          aria-label="Back"
+      <div className="flex items-center justify-between gap-x-2 px-3 py-2.5 sm:px-4 sm:py-3">
+        <div className="flex min-w-0 items-center gap-x-1.5">
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-muted-foreground hover:bg-white/10 hover:text-white"
+            aria-label="Back"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <h2 className="truncate text-base font-semibold text-white">Direct Messages</h2>
+        </div>
+
+        <Button
+          variant="transparent"
+          size="iconSm"
+          onClick={() => setMobileSidebarOpen(false)}
+          className="text-white/80 hover:bg-white/10 md:hidden"
+          aria-label="Close sidebar"
+          title="Close sidebar"
         >
-          <ChevronLeft className="size-5" />
-        </button>
-        <h2 className="text-base font-semibold text-white">Direct Messages</h2>
+          <X className="size-4" />
+        </Button>
       </div>
 
       <div className="flex flex-col overflow-y-auto px-2 py-1">

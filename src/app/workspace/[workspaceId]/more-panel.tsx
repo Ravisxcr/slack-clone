@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, Loader, Settings, Trash2 } from 'lucide-react';
+import { ChevronLeft, Loader, Settings, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -20,6 +20,8 @@ import { useRemoveMember } from '@/features/members/api/use-remove-member';
 import { useCurrentMember } from '@/features/members/api/use-current-member';
 import { useGetWorkspace } from '@/features/workspaces/api/use-get-workspace';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
+import { Button } from '@/components/ui/button';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 import type { Id } from '@/../convex/_generated/dataModel';
 
 import { PreferencesModal } from './preferences-modal';
@@ -30,6 +32,7 @@ interface MorePanelProps {
 
 export const MorePanel = ({ onClose }: MorePanelProps) => {
   const workspaceId = useWorkspaceId();
+  const [, setMobileSidebarOpen] = useMobileSidebar();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{ id: Id<'members'>; name: string } | null>(null);
 
@@ -87,7 +90,17 @@ export const MorePanel = ({ onClose }: MorePanelProps) => {
         >
           <ChevronLeft className="size-5" />
         </button>
-        <h2 className="text-base font-semibold text-white">More</h2>
+        <h2 className="flex-1 text-base font-semibold text-white">More</h2>
+        <Button
+          variant="transparent"
+          size="iconSm"
+          className="text-white/80 hover:bg-white/10 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-label="Close sidebar"
+          title="Close sidebar"
+        >
+          <X className="size-4" />
+        </Button>
       </div>
 
       <div className="flex flex-col gap-y-6 overflow-y-auto px-4 py-2">

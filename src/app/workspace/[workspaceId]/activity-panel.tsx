@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, ChevronLeft, Loader, MessageSquare, UserMinus, UserPlus } from 'lucide-react';
+import { Bell, ChevronLeft, Loader, MessageSquare, UserMinus, UserPlus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { useMarkActivityRead } from '@/features/activities/api/use-mark-activity
 import { useGetMemberEvents } from '@/features/members/api/use-get-member-events';
 import { useParentMessageId } from '@/features/messages/store/use-parent-message-id';
 import { useWorkspaceId } from '@/hooks/use-workspace-id';
+import { useMobileSidebar } from '@/features/workspaces/store/use-mobile-sidebar';
 import { cn } from '@/lib/utils';
 
 type ActivityAction =
@@ -98,6 +99,7 @@ const ACTION_CONFIG: Record<
 export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
   const workspaceId = useWorkspaceId();
   const router = useRouter();
+  const [, setMobileSidebarOpen] = useMobileSidebar();
   const [activeTab, setActiveTab] = useState<'activity' | 'members'>('activity');
 
   const { data: events, isLoading } = useGetActivityEvents({ workspaceId });
@@ -146,6 +148,16 @@ export const ActivityPanel = ({ onClose }: ActivityPanelProps) => {
           <ChevronLeft className="size-5" />
         </button>
         <h2 className="flex-1 text-base font-semibold text-white">Activity</h2>
+        <Button
+          variant="transparent"
+          size="iconSm"
+          className="text-white/80 hover:bg-white/10 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-label="Close sidebar"
+          title="Close sidebar"
+        >
+          <X className="size-4" />
+        </Button>
         {activeTab === 'activity' && unreadCount > 0 && (
           <Button
             variant="ghost"

@@ -45,7 +45,7 @@ const Editor = ({
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [ambientMode, setAmbientMode] = useState(true);
 
-  // Detect video link (YouTube Shorts, YouTube, Instagram Reels, TikTok, Direct Video)
+  // Detect video link (YouTube Shorts, YouTube, Instagram Reels, TikTok, Direct Video, X Video)
   const detectedVideo: ParsedVideo | null = useMemo(() => {
     if (!text) return null;
     const urls = text.match(/https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/g) || [];
@@ -183,7 +183,7 @@ const Editor = ({
     onSubmit({ body, image: addedImage });
   };
 
-  const isIOS = /iPad|iPhone|iPod|Mac/.test(navigator.userAgent);
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod|Mac/.test(navigator.userAgent);
 
   const isEmpty = !image && text.replace(/<(.|\n)*?>/g, '').trim().length === 0;
 
@@ -226,7 +226,7 @@ const Editor = ({
           </div>
         )}
 
-        <div className="z-[5] flex items-center px-2 pb-2">
+        <div className="z-[5] flex flex-wrap items-center gap-1 px-2 pb-2">
           <Hint label={isToolbarVisible ? 'Hide formatting' : 'Show formatting'}>
             <Button disabled={disabled} size="iconSm" variant="ghost" onClick={toggleToolbar}>
               <PiTextAa className="size-4" />
@@ -319,7 +319,7 @@ const Editor = ({
       </div>
 
       {variant === 'create' && (
-        <div className={cn('flex justify-end p-2 text-[10px] text-muted-foreground opacity-0 transition', !isEmpty && 'opacity-100')}>
+        <div className={cn('hidden md:flex justify-end p-2 text-[10px] text-muted-foreground opacity-0 transition', !isEmpty && 'opacity-100')}>
           <p>
             <strong>Shift + {isIOS ? 'Return' : 'Enter'}</strong> to add a new line.
           </p>
